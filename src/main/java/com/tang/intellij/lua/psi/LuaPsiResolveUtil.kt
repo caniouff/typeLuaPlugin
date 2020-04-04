@@ -28,6 +28,8 @@ import com.intellij.util.Processor
 import com.tang.intellij.lua.Constants
 import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
+import com.tang.intellij.lua.ty.*
+import org.luaj.vm2.LuaClosure
 
 internal fun resolveFuncBodyOwner(ref: LuaNameExpr, context: SearchContext): LuaFuncBodyOwner? {
     var ret:LuaFuncBodyOwner? = null
@@ -99,6 +101,11 @@ fun resolveInFile(refName:String, pin: PsiElement, context: SearchContext?): Psi
             else
                 expr
         }
+
+        if (ret == null) {
+            ret = resolveReceiver(pin, context)
+        }
+
     }
     return ret
 }
@@ -113,6 +120,11 @@ fun isUpValue(ref: LuaNameExpr, context: SearchContext): Boolean {
             val methodFuncBody = classMethodFuncDef.funcBody
             if (methodFuncBody != null)
                 return methodFuncBody.textOffset < funcBody.textOffset
+        }
+
+        val receiver = resolveReceiver(ref, context)
+        if (receiver != null) {
+            return true
         }
     }
 
@@ -181,6 +193,15 @@ fun resolve(indexExpr: LuaIndexExpr, idString: String, context: SearchContext): 
             return@Processor false
         true
     })
+
+    if (ret == null) {
+        TyUnion.processStruct(type, context){
+            ret = it.findMember(idString, context)
+            if (ret != null)
+                return@processStruct false
+            true
+        }
+    }
     return ret
 }
 
@@ -202,5 +223,30 @@ fun resolveRequireFile(pathString: String?, project: Project): LuaPsiFile? {
         if (psiFile is LuaPsiFile)
             return psiFile
     }
+    return null
+}
+
+fun resolveReceiver(pin: PsiElement?, context: SearchContext?) : PsiElement? {
+    if (pin == null || context == null) {
+        return null
+    }
+    val closureExpr = PsiTreeUtil.getParentOfType(pin, LuaClosureExpr::class.java)
+    closureExpr ?: return null
+    val assignStat = PsiTreeUtil.getParentOfType(closureExpr, LuaAssignStat::class.java)
+    assignStat ?: return null
+    if (context != null && assignStat.valueExprList?.exprList?.size == 1) {
+        val funcDef = context.withIndex(0){
+            assignStat.varExprList.guessTypeAt(context)
+        }
+        var receiver : LuaExpr? = null
+        if (funcDef != null && funcDef is TyFuncDefPsiFunction && funcDef.structFunc) {
+            val defExpr = assignStat.varExprList.exprList[0]
+            if (defExpr is LuaIndexExpr) {
+                receiver = PsiTreeUtil.getStubChildOfType(defExpr, LuaExpr::class.java)
+            }
+        }
+        return receiver
+    }
+
     return null
 }

@@ -61,6 +61,11 @@ open class ClassMemberCompletionProvider : LuaCompletionProvider() {
             if (!Ty.isInvalid(prefixType)) {
                 complete(isColon, project, contextTy, prefixType, completionResultSet, completionResultSet.prefixMatcher, null)
             }
+
+            TyUnion.processStruct(prefixType, searchContext) {
+                complete(isColon, project, contextTy, it, completionResultSet, completionResultSet.prefixMatcher, null)
+                true
+            }
             //smart
             val nameExpr = indexExpr.prefixExpr
             if (nameExpr is LuaNameExpr) {
@@ -173,6 +178,9 @@ open class ClassMemberCompletionProvider : LuaCompletionProvider() {
                             handlerProcessor: HandlerProcessor?) {
         val name = classMember.name
         if (name != null) {
+            if (!isColonStyle && fnTy is TyFuncDefPsiFunction && fnTy.structFunc) {
+                return
+            }
             fnTy.process(Processor {
 
                 val firstParam = it.getFirstParam(thisType, isColonStyle)

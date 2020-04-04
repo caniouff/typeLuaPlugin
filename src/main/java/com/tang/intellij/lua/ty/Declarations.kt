@@ -146,6 +146,12 @@ private fun LuaNameDef.infer(context: SearchContext): ITy {
             if (type !is ITyPrimitive)
                 type = type.union(TyClass.createAnonymousType(this))
         }
+
+        val assignStat = PsiTreeUtil.getParentOfType(this, LuaAssignStat::class.java)
+        val receiver = resolveReceiver(assignStat, context)
+        if (receiver is LuaTypeGuessable) {
+            type = receiver.guessType(context)
+        }
     }
     return type
 }

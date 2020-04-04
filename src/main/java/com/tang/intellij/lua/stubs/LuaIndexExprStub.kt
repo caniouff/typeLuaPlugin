@@ -30,9 +30,7 @@ import com.tang.intellij.lua.psi.impl.LuaIndexExprImpl
 import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
 import com.tang.intellij.lua.stubs.index.StubKeys
-import com.tang.intellij.lua.ty.ITy
-import com.tang.intellij.lua.ty.ITyClass
-import com.tang.intellij.lua.ty.TyUnion
+import com.tang.intellij.lua.ty.*
 
 /**
 
@@ -66,9 +64,14 @@ class LuaIndexExprType : LuaStubElementType<LuaIndexExprStub, LuaIndexExpr>("IND
         if (stat != null) {
             val context = SearchContext(indexExpr.project, indexExpr.containingFile, true)
             val ty = indexExpr.guessParentType(context)
-            TyUnion.each(ty) {
-                if (it is ITyClass)
-                    classNameSet.add(it.className)
+
+            val tyStruct = TyUnion.find(ty, TyStruct::class.java)
+            val tyFuncDef = TyUnion.find(ty, TyFuncDef::class.java)
+            if (tyStruct == null || tyFuncDef != null) {
+                TyUnion.each(ty) {
+                    if (it is ITyClass)
+                        classNameSet.add(it.className)
+                }
             }
             context.forStore = false
         }

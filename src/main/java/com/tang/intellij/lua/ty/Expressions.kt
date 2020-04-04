@@ -372,6 +372,10 @@ private fun LuaIndexExpr.infer(context: SearchContext): ITy {
         if (funcDef != null && result is TyFunction) {
             return@Computable TyFuncDefPsiFunction(funcDef, result)
         }
+        val tyStruct = TyUnion.find(parentType, TyStruct::class.java)
+        if (tyStruct != null) { //Struct can not assign field
+            result = Ty.UNKNOWN
+        }
 
         //from other class member
         val propName = indexExpr.name

@@ -497,6 +497,24 @@ class TyUnion : Ty(TyKind.Union) {
             }
             return clazz ?: global ?: anonymous
         }
+
+        fun processStruct(ty: ITy, context: SearchContext, fn: (ITyClass) -> Boolean) {
+            val tyTable = find(ty, TyTable::class.java)
+            val tyStruct = find(ty, TyStruct::class.java)
+            if (tyStruct != null && tyTable != null) {
+                for (field in tyTable.table.tableFieldList) {
+                    if (field is LuaTableField && field.name == null) {
+                        val fieldType = field.valueExpr?.guessType(context) ?: UNKNOWN
+                        if (find(fieldType, TyStruct::class.java) != null)
+                            fieldType.eachTopClass(Processor { ty ->
+                                if (!fn(ty))
+                                    return@Processor false
+                                true
+                            })
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -576,7 +594,9 @@ class TyFuncDef : Ty(TyKind.FuncDef) {
             val signature = functionTy.mainSignature
             return tyTuple.list.map {
                 val p = LuaParamInfo()
-                p.name = signature.params[idx].name
+                if (idx < signature.params.size) {
+                    p.name = signature.params[idx].name
+                }
                 p.ty = it
                 idx ++
                 p

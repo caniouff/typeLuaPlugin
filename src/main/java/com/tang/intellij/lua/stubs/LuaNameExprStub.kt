@@ -17,10 +17,7 @@
 package com.tang.intellij.lua.stubs
 
 import com.intellij.lang.ASTNode
-import com.intellij.psi.stubs.IndexSink
-import com.intellij.psi.stubs.StubElement
-import com.intellij.psi.stubs.StubInputStream
-import com.intellij.psi.stubs.StubOutputStream
+import com.intellij.psi.stubs.*
 import com.intellij.util.io.StringRef
 import com.tang.intellij.lua.Constants
 import com.tang.intellij.lua.psi.*
@@ -29,6 +26,8 @@ import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
 import com.tang.intellij.lua.stubs.index.StubKeys
 import com.tang.intellij.lua.ty.ITy
+import com.tang.intellij.lua.ty.TyStruct
+import com.tang.intellij.lua.ty.TyUnion
 
 /**
  * name expr stub
@@ -46,15 +45,24 @@ class LuaNameExprType : LuaStubElementType<LuaNameExprStub, LuaNameExpr>("NAME_E
         val psiFile = luaNameExpr.containingFile
         val name = luaNameExpr.name
         val module = if (psiFile is LuaPsiFile) psiFile.moduleName ?: Constants.WORD_G else Constants.WORD_G
-        val isGlobal = resolveLocal(luaNameExpr, SearchContext(luaNameExpr.project, psiFile)) == null
+        val searchContext = SearchContext(luaNameExpr.project, psiFile)
+        val isGlobal = resolveLocal(luaNameExpr, searchContext) == null
 
         val stat = luaNameExpr.assignStat
         val docTy = stat?.comment?.ty
+        var structType = Constants.ST_NONE
 
+        val guessType = luaNameExpr.guessType(searchContext)
+        TyUnion.each(guessType) {
+            if (it is TyStruct) {
+                structType = if(it.isInterface) Constants.ST_INTERFACE else Constants.ST_IMPLEMENT
+            }
+        }
         return LuaNameExprStubImpl(name,
                 module,
                 stat != null,
                 isGlobal,
+                structType,
                 docTy,
                 stubElement,
                 this)
@@ -65,6 +73,7 @@ class LuaNameExprType : LuaStubElementType<LuaNameExprStub, LuaNameExpr>("NAME_E
         stream.writeName(stub.module)
         stream.writeBoolean(stub.isName)
         stream.writeBoolean(stub.isGlobal)
+        stream.writeInt(stub.structType)
         stream.writeTyNullable(stub.docTy)
     }
 
@@ -73,11 +82,13 @@ class LuaNameExprType : LuaStubElementType<LuaNameExprStub, LuaNameExpr>("NAME_E
         val moduleRef = stream.readName()
         val isName = stream.readBoolean()
         val isGlobal = stream.readBoolean()
+        val structType = stream.readInt()
         val docTy = stream.readTyNullable()
         return LuaNameExprStubImpl(StringRef.toString(nameRef),
                 StringRef.toString(moduleRef),
-                isGlobal,
                 isName,
+                isGlobal,
+                structType,
                 docTy,
                 stubElement,
                 this)
@@ -90,6 +101,12 @@ class LuaNameExprType : LuaStubElementType<LuaNameExprStub, LuaNameExpr>("NAME_E
             LuaClassMemberIndex.indexStub(indexSink, module, luaNameStub.name)
 
             indexSink.occurrence(StubKeys.SHORT_NAME, luaNameStub.name)
+
+            if (luaNameStub.structType == Constants.ST_IMPLEMENT) {
+                indexSink.occurrence(StubKeys.STRUCT, luaNameStub.name)
+            } else if(luaNameStub.structType == Constants.ST_INTERFACE) {
+                indexSink.occurrence(StubKeys.INTERFACE, luaNameStub.name)
+            }
         }
     }
 }
@@ -99,6 +116,7 @@ interface LuaNameExprStub : LuaExprStub<LuaNameExpr>, LuaDocTyStub {
     val module: String
     val isName: Boolean
     val isGlobal: Boolean
+    val structType: Int
 }
 
 class LuaNameExprStubImpl(
@@ -106,6 +124,7 @@ class LuaNameExprStubImpl(
         override val module: String,
         override val isName: Boolean,
         override val isGlobal: Boolean,
+        override val structType: Int,
         override val docTy: ITy?,
         parent: StubElement<*>,
         elementType: LuaStubElementType<*, *>

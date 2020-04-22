@@ -498,11 +498,17 @@ class TyUnion : Ty(TyKind.Union) {
             return clazz ?: global ?: anonymous
         }
 
-        fun processStruct(ty: ITy, context: SearchContext, fn: (ITyClass) -> Boolean) {
+        fun processStructUnion(ty: ITy, context: SearchContext, fn: (ITyClass) -> Boolean) {
             val tyTable = find(ty, TyTable::class.java)
             val tyStruct = find(ty, TyStruct::class.java)
-            if (tyStruct != null && tyTable != null) {
-                for (field in tyTable.table.tableFieldList) {
+            if ((tyStruct != null) && tyTable != null) {
+                processStructField(tyTable, context, fn)
+            }
+        }
+
+        fun processStructField(ty: ITy, context: SearchContext, fn: (ITyClass) -> Boolean) {
+            if (ty is TyTable) {
+                for (field in ty.table.tableFieldList) {
                     if (field is LuaTableField && field.name == null) {
                         val fieldType = field.valueExpr?.guessType(context) ?: UNKNOWN
                         if (find(fieldType, TyStruct::class.java) != null)
@@ -556,6 +562,7 @@ class TyFuncDef : Ty(TyKind.FuncDef) {
     var global : Boolean = false
     var moduleName : String? = null
     var receiver:ITy? = null
+    var isInterface: Boolean = false
     override fun subTypeOf(other: ITy, context: SearchContext, strict: Boolean): Boolean {
         return false
     }

@@ -17,6 +17,7 @@
 package com.tang.intellij.lua.codeInsight.inspection
 
 import com.intellij.codeInspection.LocalInspectionToolSession
+import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
 import com.tang.intellij.lua.psi.*
@@ -46,12 +47,11 @@ class MatchFunctionSignatureInspection : StrictInspection() {
 
                 override fun visitCallExpr(o: LuaCallExpr) {
                     super.visitCallExpr(o)
-
                     val searchContext = SearchContext(o.project)
                     val prefixExpr = o.expr
                     val type = prefixExpr.guessType(searchContext)
 
-                    if (type is TyPsiFunction) {
+                     if (type is ITyFunction) {
                         val perfectSig = type.findPerfectSignature(o)
                         annotateCall(o, perfectSig, searchContext)
                     } else if (prefixExpr is LuaIndexExpr) {
@@ -60,14 +60,15 @@ class MatchFunctionSignatureInspection : StrictInspection() {
                         if (parentType is TyClass) {
                             val fType = prefixExpr.name?.let { parentType.findSuperMember(it, searchContext) }
                             if (fType == null)
-                                myHolder.registerProblem(o, "Unknown function '%s'.".format(prefixExpr.lastChild.text))
+                                myHolder.registerProblem(o, "Unknown function '%s'.".format(prefixExpr.lastChild.text), ProblemHighlightType.ERROR)
                         }
                     } else if (type == Ty.NIL) {
-                        myHolder.registerProblem(o, "Unknown function '%s'.".format(prefixExpr.lastChild.text))
+                        myHolder.registerProblem(o, "Unknown function '%s'.".format(prefixExpr.lastChild.text), ProblemHighlightType.ERROR)
                     }
                 }
 
                 private fun annotateCall(call: LuaCallExpr, signature: IFunSignature, searchContext: SearchContext) {
+
                     val concreteParams = call.argList
                     val concreteTypes = mutableListOf<ConcreteTypeInfo>()
                     concreteParams.forEachIndexed { index, luaExpr ->
@@ -86,18 +87,19 @@ class MatchFunctionSignatureInspection : StrictInspection() {
                         nArgs = i + 1
                         val typeInfo = concreteTypes.getOrNull(i)
                         if (typeInfo == null) {
-                            myHolder.registerProblem(call.lastChild.lastChild, "Missing argument: ${pi.name}: ${pi.ty}")
+                            myHolder.registerProblem(call.lastChild.lastChild, "Missing argument: ${pi.name}: ${pi.ty}", ProblemHighlightType.ERROR)
                             return@processArgs true
                         }
 
                         val type = typeInfo.ty
                         if (!type.subTypeOf(pi.ty, searchContext, false))
-                            myHolder.registerProblem(typeInfo.param, "Type mismatch. Required: '${pi.ty}' Found: '$type'")
+                            myHolder.registerProblem(typeInfo.param, "Type mismatch. Required: '${pi.ty}' Found: '$type'", ProblemHighlightType.ERROR)
                         true
                     }
+
                     if (nArgs < concreteParams.size && !signature.hasVarargs()) {
                         for (i in nArgs until concreteParams.size) {
-                            myHolder.registerProblem(concreteParams[i], "Too many arguments.")
+                            myHolder.registerProblem(concreteParams[i], "Too many arguments.", ProblemHighlightType.ERROR)
                         }
                     }
                 }

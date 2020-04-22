@@ -17,17 +17,24 @@
 package com.tang.intellij.lua.stubs.index
 
 import com.intellij.psi.NavigatablePsiElement
-import com.intellij.psi.stubs.StubIndexKey
-import com.tang.intellij.lua.comment.psi.LuaDocTagClass
-import com.tang.intellij.lua.psi.LuaClassMember
+import com.intellij.psi.stubs.StringStubIndexExtension
+import com.tang.intellij.lua.lang.LuaLanguage
 import com.tang.intellij.lua.psi.LuaTypeGuessable
+import com.tang.intellij.lua.search.SearchContext
 
-object StubKeys {
-    val CLASS_MEMBER = StubIndexKey.createIndexKey<String, LuaClassMember>("lua.index.class.member")
-    val SHORT_NAME = StubIndexKey.createIndexKey<String, NavigatablePsiElement>("lua.index.short_name")
-    val CLASS = StubIndexKey.createIndexKey<String, LuaDocTagClass>("lua.index.class")
-    val SUPER_CLASS = StubIndexKey.createIndexKey<String, LuaDocTagClass>("lua.index.super_class")
-    val STRUCT = StubIndexKey.createIndexKey<String, LuaTypeGuessable>("lua.index.struct")
-    val INTERFACE = StubIndexKey.createIndexKey<String, LuaTypeGuessable>("lua.index.interface")
+class LuaInterfaceNameIndex : StringStubIndexExtension<LuaTypeGuessable>() {
 
+    override fun getVersion(): Int {
+        return LuaLanguage.INDEX_VERSION
+    }
+
+    override fun getKey() = StubKeys.INTERFACE
+
+    companion object {
+        val instance = LuaInterfaceNameIndex()
+
+        fun find(key: String, searchContext: SearchContext): Collection<LuaTypeGuessable> {
+            return if (searchContext.isDumb) emptyList() else instance.get(key, searchContext.project, searchContext.getScope())
+        }
+    }
 }

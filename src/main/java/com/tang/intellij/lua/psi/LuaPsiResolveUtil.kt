@@ -29,7 +29,6 @@ import com.tang.intellij.lua.Constants
 import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
 import com.tang.intellij.lua.ty.*
-import org.luaj.vm2.LuaClosure
 
 internal fun resolveFuncBodyOwner(ref: LuaNameExpr, context: SearchContext): LuaFuncBodyOwner? {
     var ret:LuaFuncBodyOwner? = null
@@ -195,10 +194,10 @@ fun resolve(indexExpr: LuaIndexExpr, idString: String, context: SearchContext): 
     })
 
     if (ret == null) {
-        TyUnion.processStruct(type, context){
+        TyUnion.processStructUnion(type, context){
             ret = it.findMember(idString, context)
             if (ret != null)
-                return@processStruct false
+                return@processStructUnion false
             true
         }
     }

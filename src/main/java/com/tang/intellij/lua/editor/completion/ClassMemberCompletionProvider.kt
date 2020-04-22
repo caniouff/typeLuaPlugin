@@ -62,7 +62,7 @@ open class ClassMemberCompletionProvider : LuaCompletionProvider() {
                 complete(isColon, project, contextTy, prefixType, completionResultSet, completionResultSet.prefixMatcher, null)
             }
 
-            TyUnion.processStruct(prefixType, searchContext) {
+            TyUnion.processStructUnion(prefixType, searchContext) {
                 complete(isColon, project, contextTy, it, completionResultSet, completionResultSet.prefixMatcher, null)
                 true
             }

@@ -94,10 +94,10 @@ abstract class TyClass(override val className: String,
         val project = context.project
 
         val memberIndex = LuaClassMemberIndex.instance
-        val list = memberIndex.get(clazzName.hashCode(), project, ProjectAndLibrariesScope(project))
+        val list = memberIndex.get(clazzName, project, ProjectAndLibrariesScope(project))
 
         processAlias(Processor { alias ->
-            val classMembers = memberIndex.get(alias.hashCode(), project, ProjectAndLibrariesScope(project))
+            val classMembers = memberIndex.get(alias, project, ProjectAndLibrariesScope(project))
             list.addAll(classMembers)
         })
 
@@ -267,6 +267,13 @@ fun getStructTypeName(nameExpr: LuaNameExpr?): String {
     return nameExpr.name
 }
 
+fun getInterfaceName(nameExpr: LuaNameExpr?): String {
+    if (nameExpr == null) {
+        return "(anonymous)interface"
+    }
+    return nameExpr.name
+}
+
 fun getAnonymousType(nameDef: LuaNameDef): String {
     return "${nameDef.node.startOffset}@${nameDef.containingFile.name}"
 }
@@ -327,4 +334,36 @@ class TyDocTable(val table: LuaDocTableDef) : TyClass(getDocTableTypeName(table)
 class TySerializedDocTable(name: String) : TySerializedClass(name)
 
 
-class TyStruct(nameExpr: LuaNameExpr?) : TyClass(getStructTypeName(nameExpr))
+class TyStruct(nameExpr: LuaNameExpr?) : TyClass(getStructTypeName(nameExpr)) {
+    var isInterface = false
+    var fieldTableTy :ITy? = null
+
+    fun isImplementTo(tyInterface:ITyClass?, context: SearchContext):Boolean {
+        if (tyInterface == null) {
+            return false
+        }
+        var isImplement = true
+        tyInterface.processMembers(context) {_, m ->
+            val name = m.name
+            var memberImplement = false
+            if (name != null && findMember(name, context) != null) {
+                memberImplement = true
+            }
+
+            val tableTy = fieldTableTy
+            if (name != null && !memberImplement && tableTy != null) {
+                TyUnion.processStructField(tableTy, context) {
+                    if (it.findMember(name, context) != null) {
+                        memberImplement = true
+                        return@processStructField false
+                    }
+                    return@processStructField true
+                }
+            }
+            if (name != null && !memberImplement) {
+                isImplement = false
+            }
+        }
+        return isImplement
+    }
+}

@@ -20,6 +20,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.stubs.IndexSink
 import com.intellij.psi.stubs.IntStubIndexExtension
+import com.intellij.psi.stubs.StringStubIndexExtension
 import com.intellij.psi.stubs.StubIndex
 import com.intellij.util.Processor
 import com.intellij.util.containers.ContainerUtil
@@ -32,10 +33,10 @@ import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.ty.ITyClass
 import com.tang.intellij.lua.ty.TyParameter
 
-class LuaClassMemberIndex : IntStubIndexExtension<LuaClassMember>() {
+class LuaClassMemberIndex : StringStubIndexExtension<LuaClassMember>() {
     override fun getKey() = StubKeys.CLASS_MEMBER
 
-    override fun get(s: Int, project: Project, scope: GlobalSearchScope): MutableCollection<LuaClassMember> =
+    override fun get(s: String, project: Project, scope: GlobalSearchScope): MutableCollection<LuaClassMember> =
             StubIndex.getElements(StubKeys.CLASS_MEMBER, s, project, scope, LuaClassMember::class.java)
 
     companion object {
@@ -44,7 +45,7 @@ class LuaClassMemberIndex : IntStubIndexExtension<LuaClassMember>() {
         fun process(key: String, context: SearchContext, processor: Processor<LuaClassMember>): Boolean {
             if (context.isDumb)
                 return false
-            val all = LuaClassMemberIndex.instance.get(key.hashCode(), context.project, context.getScope())
+            val all = LuaClassMemberIndex.instance.get(key, context.project, context.getScope())
             return ContainerUtil.process(all, processor)
         }
 
@@ -129,8 +130,8 @@ class LuaClassMemberIndex : IntStubIndexExtension<LuaClassMember>() {
         }
 
         fun indexStub(indexSink: IndexSink, className: String, memberName: String) {
-            indexSink.occurrence(StubKeys.CLASS_MEMBER, className.hashCode())
-            indexSink.occurrence(StubKeys.CLASS_MEMBER, "$className*$memberName".hashCode())
+            indexSink.occurrence(StubKeys.CLASS_MEMBER, className)
+            indexSink.occurrence(StubKeys.CLASS_MEMBER, "$className*$memberName")
         }
     }
 }

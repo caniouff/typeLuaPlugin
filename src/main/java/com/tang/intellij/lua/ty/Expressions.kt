@@ -27,9 +27,7 @@ import com.tang.intellij.lua.project.LuaSettings
 import com.tang.intellij.lua.psi.*
 import com.tang.intellij.lua.psi.impl.LuaNameExprMixin
 import com.tang.intellij.lua.search.SearchContext
-import com.tang.intellij.lua.stubs.LuaFuncType
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
-import kotlin.reflect.jvm.internal.impl.util.ValueParameterCountCheck
 
 fun inferExpr(expr: LuaExpr?, context: SearchContext): ITy {
     return when (expr) {
@@ -170,19 +168,23 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
             return file.guessType(context)
 
         return Ty.UNKNOWN
-    } else if (expr is LuaNameExpr && expr.name == Constants.WORD_STRUCT) {
+    } else if (expr is LuaNameExpr && (expr.name == Constants.WORD_STRUCT) || expr.name == Constants.WORD_INTERFACE) {
         val argsExpr = luaCallExpr.args
         if (argsExpr is LuaSingleArg) {
-            var argstype = argsExpr.expr.guessType(context)
+            var argsType = argsExpr.expr.guessType(context)
             val assignStat = PsiTreeUtil.getParentOfType(this, LuaAssignStat::class.java)
             val nameExpr = assignStat?.varExprList?.exprList?.get(0)
             if (nameExpr != null && nameExpr is LuaNameExpr) {
-                argstype = argstype.union(TyStruct(nameExpr))
+                var tyStruct = TyStruct(nameExpr)
+                tyStruct.isInterface = (expr.name == Constants.WORD_INTERFACE)
+                tyStruct.fieldTableTy = argsType
+                argsType = argsType.union(tyStruct)
             }
-            return argstype
+            return argsType
         }
     } else if (expr is LuaNameExpr && expr.name == Constants.WORD_FUNCDEF) {
         val argsExpr = luaCallExpr.args
+
         if (argsExpr is LuaListArgs) {
             if (argsExpr.exprList.size == 1) {
                 val arg = argsExpr.exprList[0]
@@ -214,6 +216,7 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
             is TyFuncDef -> {
                 it.setParamsOrReturns(luaCallExpr.args, context)
                 val funDef = it.union(it.toFuncDefReceiver())
+
                 ret = ret.union(funDef)
             }
             //constructor : Class table __call

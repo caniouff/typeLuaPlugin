@@ -27,6 +27,7 @@ import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.editor.markup.SeparatorPlacement
 import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
@@ -34,6 +35,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Function
 import com.intellij.util.FunctionUtil
 import com.intellij.util.Query
+import com.tang.intellij.lua.Constants
 import com.tang.intellij.lua.comment.psi.LuaDocTagClass
 import com.tang.intellij.lua.lang.LuaIcons
 import com.tang.intellij.lua.psi.*
@@ -41,7 +43,10 @@ import com.tang.intellij.lua.psi.search.LuaClassInheritorsSearch
 import com.tang.intellij.lua.psi.search.LuaOverridingMethodsSearch
 import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
-import com.tang.intellij.lua.ty.TyClass
+import com.tang.intellij.lua.stubs.index.LuaInterfaceNameIndex
+import com.tang.intellij.lua.stubs.index.LuaStructNameIndex
+import com.tang.intellij.lua.ty.*
+import com.twelvemonkeys.util.CollectionUtil
 
 /**
  * line marker
@@ -144,6 +149,7 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
             result.add(classIcon)
         } else if (element is LuaCallExpr) {
             val expr = element.expr
+
             val reference = expr.reference
             if (reference != null) {
                 val resolve = reference.resolve()
@@ -164,6 +170,69 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
                             break
                         }
                         cur = bodyOwner
+                    }
+                }
+            }
+
+            if (expr.text == Constants.WORD_FUNCDEF) {
+                val project = element.getProject()
+                val context = SearchContext(project)
+                val argsExpr = element.args
+                var receiverType : TyStruct? = null
+                if (argsExpr is LuaListArgs) {
+                    if (argsExpr.exprList.size == 1) {
+                        val arg = argsExpr.exprList[0]
+                        val guessType = arg.guessType(context)
+                        receiverType = TyUnion.find(guessType, TyStruct::class.java)
+                    }
+                }
+                val luaIndexExpr = LuaPsiTreeUtil.getParentOfType(element, LuaIndexExpr::class.java, LuaCallExpr::class.java)
+                if (receiverType != null && luaIndexExpr != null) {
+                    println("WORD_FUNCDEF:" + luaIndexExpr.name + "-" + receiverType.isInterface)
+                    if (receiverType.isInterface) {
+                        val structTargets = collectImplementInterfaceStructs(receiverType, project, context)
+                        val funcTargets = collectFunInStructs(structTargets, luaIndexExpr.name ?: "", context)
+                        if (funcTargets.size > 0) {
+                            val builder = NavigationGutterIconBuilder.create(AllIcons.Gutter.ImplementedMethod)
+                                    .setTargets(funcTargets)
+                                    .setTooltipText("Implement method")
+                            result.add(builder.createLineMarkerInfo(expr))
+                        }
+                    } else {
+                        val interfaceTargets = collectStructImplementInterfaces(receiverType, project, context)
+                        val funcTargets = collectFunInStructs(interfaceTargets, luaIndexExpr.name ?: "", context)
+                        if (funcTargets.size > 0) {
+                            val builder = NavigationGutterIconBuilder.create(AllIcons.Gutter.OverridingMethod)
+                                    .setTargets(funcTargets)
+                                    .setTooltipText("Implement Interface")
+                            result.add(builder.createLineMarkerInfo(expr))
+                        }
+                    }
+                }
+            } else if (expr.text == Constants.WORD_STRUCT) {
+                val project = element.getProject()
+                val context = SearchContext(project)
+                val tyStruct = TyUnion.find(element.guessType(context), TyStruct::class.java)
+                if (tyStruct is TyStruct) {
+                    val interfaceTargets = collectStructImplementInterfaces(tyStruct, project, context)
+                    if (interfaceTargets.size > 0) {
+                        val builder = NavigationGutterIconBuilder.create(AllIcons.Gutter.OverridingMethod)
+                                .setTargets(interfaceTargets)
+                                .setTooltipText("Implement Interface")
+                        result.add(builder.createLineMarkerInfo(expr))
+                    }
+                }
+            } else if (expr.text == Constants.WORD_INTERFACE) {
+                val project = element.getProject()
+                val context = SearchContext(project)
+                val tyInterface = TyUnion.find(element.guessType(context), TyStruct::class.java)
+                if (tyInterface is TyStruct) {
+                    val structTargets = collectImplementInterfaceStructs(tyInterface, project, context)
+                    if (structTargets.size > 0) {
+                        val builder = NavigationGutterIconBuilder.create(AllIcons.Gutter.ImplementedMethod)
+                                .setTargets(structTargets)
+                                .setTooltipText("Implement struct")
+                        result.add(builder.createLineMarkerInfo(expr))
                     }
                 }
             }
@@ -195,5 +264,65 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
             ProgressManager.checkCanceled()
             collectNavigationMarkers(element, collection)
         }
+    }
+
+    fun collectStructImplementInterfaces(tyStruct: TyStruct, project: Project, context: SearchContext): ArrayList<LuaTypeGuessable> {
+        val interfaceTargets = ArrayList<LuaTypeGuessable>()
+        LuaInterfaceNameIndex.instance.processAllKeys(project) {
+            val all = LuaInterfaceNameIndex.instance.get(it, context.project, context.getScope())
+            all.forEach {member->
+                var tyInterface :ITy? = member.guessType(context)
+                if (tyInterface != null) {
+                    TyUnion.each(tyInterface) {tyClass->
+                        if (tyClass is ITyClass && tyStruct.isImplementTo(tyClass, context)) {
+                            interfaceTargets.add(member)
+                        }
+                    }
+                }
+
+            }
+            true
+        }
+        return interfaceTargets
+    }
+
+    fun collectImplementInterfaceStructs(tyInteface: TyStruct, project: Project, context: SearchContext): ArrayList<LuaTypeGuessable> {
+        val structTargets = ArrayList<LuaTypeGuessable>()
+        LuaStructNameIndex.instance.processAllKeys(project) {
+            val all = LuaStructNameIndex.instance.get(it, context.project, context.getScope())
+            all.forEach {member->
+                var tyStruct :ITy? = member.guessType(context)
+                if (tyStruct != null) {
+                    TyUnion.each(tyStruct) {tyClass->
+                        if (tyClass is TyStruct && tyClass.isImplementTo(tyInteface, context)) {
+                            structTargets.add(member)
+                        }
+                    }
+                }
+
+            }
+            true
+        }
+        return structTargets
+    }
+
+    fun collectFunInStructs(tyStructs : ArrayList<LuaTypeGuessable>, name : String, context: SearchContext) : ArrayList<LuaTypeGuessable> {
+        val funTargets = ArrayList<LuaTypeGuessable>()
+        if (name != "") {
+            tyStructs.forEach {
+                var tyClass :ITy? = it.guessType(context)
+                if (tyClass != null) {
+                    TyUnion.each(tyClass) { tyStruct ->
+                        if (tyStruct is ITyClass) {
+                            val func = tyStruct.findMember(name, context)
+                            if (func != null) {
+                                funTargets.add(func)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return funTargets
     }
 }

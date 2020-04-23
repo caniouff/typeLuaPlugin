@@ -39,6 +39,8 @@ public class Constants {
     public static final String WORD_STRUCT = "struct";
     public static final String WORD_INTERFACE = "interface";
     public static final String WORD_FUNCDEF = "func";
+    public static final String WORD_MAP = "map";
+    public static final String WORD_LIST = "list";
 
     public static final int ST_NONE = 0;
     public static final int ST_IMPLEMENT = 1;

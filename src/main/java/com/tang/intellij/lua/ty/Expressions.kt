@@ -198,6 +198,36 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
                 return def
             }
         }
+    } else if (expr is LuaNameExpr && expr.name == Constants.WORD_MAP) {
+        val argsExpr = luaCallExpr.args
+
+        if (argsExpr is LuaListArgs) {
+            var params = mutableListOf<ITy>()
+            argsExpr.exprList.forEach {
+                val tyBuildIn = if (it is LuaLiteralExpr && it.kind == LuaLiteralKind.String) Ty.getBuiltin(it.text.trim('\"')) else null
+                if (tyBuildIn != null) {
+                    params.add(tyBuildIn)
+                } else {
+                    params.add(it.guessType(context))
+                }
+            }
+
+            var base = expr.guessType(context)
+            return TySerializedGeneric(params.toTypedArray(), base)
+        }
+    } else if (expr is LuaNameExpr && expr.name == Constants.WORD_LIST) {
+        val argsExpr = luaCallExpr.args
+        if (argsExpr is LuaListArgs && argsExpr.exprList.size == 1) {
+            val listTypeExpr = argsExpr.exprList[0]
+            if (listTypeExpr is LuaLiteralExpr && listTypeExpr.kind == LuaLiteralKind.String) {
+                val buildInTy = Ty.getBuiltin(listTypeExpr.text.trim('\"'))
+                if (buildInTy != null) {
+                    return TyArray(buildInTy)
+                }
+            }
+            var base = listTypeExpr.guessType(context)
+            return TyArray(base)
+        }
     }
 
     var ret: ITy = Ty.UNKNOWN

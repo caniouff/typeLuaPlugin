@@ -73,6 +73,9 @@ fun resolveInFile(refName:String, pin: PsiElement, context: SearchContext?): Psi
     var ret: PsiElement? = null
     var lastNameExpr: LuaNameExpr? = null
 
+    if (ret != null) {
+        return ret
+    }
     //local/param
     LuaPsiTreeUtilEx.walkUpNameDef(pin, Processor { nameDef ->
         if (refName == nameDef.name)
@@ -90,42 +93,12 @@ fun resolveInFile(refName:String, pin: PsiElement, context: SearchContext?): Psi
 
     ret = ret ?: lastNameExpr
 
-    if (ret == null && refName == Constants.WORD_SELF) {
-        val methodDef = PsiTreeUtil.getStubOrPsiParentOfType(pin, LuaClassMethodDef::class.java)
-        if (methodDef != null && !methodDef.isStatic) {
-            val methodName = methodDef.classMethodName
-            val expr = methodName.expr
-            ret = if (expr is LuaNameExpr && context != null && expr.name != Constants.WORD_SELF)
-                resolve(expr, context)
-            else
-                expr
-        }
 
-        if (ret == null) {
-            ret = resolveReceiver(pin, context)
-        }
-
-    }
     return ret
 }
 
 fun isUpValue(ref: LuaNameExpr, context: SearchContext): Boolean {
     val funcBody = PsiTreeUtil.getParentOfType(ref, LuaFuncBody::class.java) ?: return false
-
-    val refName = ref.name
-    if (refName == Constants.WORD_SELF) {
-        val classMethodFuncDef = PsiTreeUtil.getParentOfType(ref, LuaClassMethodDef::class.java)
-        if (classMethodFuncDef != null && !classMethodFuncDef.isStatic) {
-            val methodFuncBody = classMethodFuncDef.funcBody
-            if (methodFuncBody != null)
-                return methodFuncBody.textOffset < funcBody.textOffset
-        }
-
-        val receiver = resolveReceiver(ref, context)
-        if (receiver != null) {
-            return true
-        }
-    }
 
     val resolve = resolveLocal(ref, context)
     if (resolve != null) {

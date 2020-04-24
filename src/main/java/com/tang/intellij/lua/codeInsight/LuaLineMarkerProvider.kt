@@ -188,7 +188,6 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
                 }
                 val luaIndexExpr = LuaPsiTreeUtil.getParentOfType(element, LuaIndexExpr::class.java, LuaCallExpr::class.java)
                 if (receiverType != null && luaIndexExpr != null) {
-                    println("WORD_FUNCDEF:" + luaIndexExpr.name + "-" + receiverType.isInterface)
                     if (receiverType.isInterface) {
                         val structTargets = collectImplementInterfaceStructs(receiverType, project, context)
                         val funcTargets = collectFunInStructs(structTargets, luaIndexExpr.name ?: "", context)

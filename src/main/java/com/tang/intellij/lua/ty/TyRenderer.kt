@@ -38,12 +38,12 @@ open class TyRenderer : TyVisitor(), ITyRenderer {
                     is TyVoid -> sb.append(renderType(Constants.WORD_VOID))
                     is TyUnknown -> sb.append(renderType(Constants.WORD_ANY))
                     is TyNil -> sb.append(renderType(Constants.WORD_NIL))
-                    is TyStruct -> sb.append(renderType(Constants.WORD_STRUCT))
+                    is TyStruct -> sb.append(renderType(ty.displayName))
                     is TyFuncDef -> sb.append(renderType(Constants.WORD_FUNCDEF))
                     is ITyGeneric -> {
                         val list = mutableListOf<String>()
                         ty.params.forEach { list.add(it.displayName) }
-                        sb.append("${ty.base.displayName}<${list.joinToString(", ")}>")
+                        sb.append("${ty.base.displayName}[${list.joinToString(", ")}]")
                     }
                     is TyParameter -> {
 
@@ -59,6 +59,11 @@ open class TyRenderer : TyVisitor(), ITyRenderer {
             }
 
             override fun visitUnion(u: TyUnion) {
+                val tyStruct = TyUnion.find(u, TyStruct::class.java)
+                if (tyStruct != null) {
+                    sb.append(tyStruct.displayName)
+                    return
+                }
                 val list = mutableSetOf<String>()
                 u.acceptChildren(object : TyVisitor() {
                     override fun visitTy(ty: ITy) {

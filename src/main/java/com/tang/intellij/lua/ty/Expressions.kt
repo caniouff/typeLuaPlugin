@@ -154,7 +154,12 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
     val luaCallExpr = this
     // xxx()
     val expr = luaCallExpr.expr
+    val exprType = expr.guessType(context)
+    if (TyUnion.has(exprType, TyStruct::class.java) && !TyUnion.has(exprType, TyFuncDef::class.java)) {
+        return exprType
+    }
     // 从 require 'xxx' 中获取返回类型
+
     if (expr is LuaNameExpr && expr.name == Constants.WORD_REQUIRE) {
         var filePath: String? = null
         val string = luaCallExpr.firstStringArg
@@ -212,7 +217,7 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
                 }
             }
 
-            var base = expr.guessType(context)
+            var base = TyPrimitive(TyPrimitiveKind.String, Constants.WORD_MAP)
             return TySerializedGeneric(params.toTypedArray(), base)
         }
     } else if (expr is LuaNameExpr && expr.name == Constants.WORD_LIST) {
@@ -415,6 +420,17 @@ private fun LuaIndexExpr.infer(context: SearchContext): ITy {
         if (propName != null) {
             val prefixType = parentTy ?: indexExpr.guessParentType(context)
 
+            val isStruct = TyUnion.has(prefixType, TyStruct::class.java)
+            if (isStruct) {
+                TyUnion.processStructUnion(prefixType, context) {
+                    val fieldType = guessFieldType(propName, it, context)
+                    if (fieldType != Ty.UNKNOWN) {
+                        result = fieldType
+                        return@processStructUnion false
+                    }
+                    true
+                }
+            }
             prefixType.eachTopClass(Processor {
                 result = result.union(guessFieldType(propName, it, context))
                 true

@@ -320,7 +320,7 @@ class TyDocPsiFunction(func: LuaDocFunctionTy) : TyFunction() {
 }
 
 class TyFuncDefPsiFunction(funcDef: TyFuncDef, functionTy: TyFunction) : TyFunction() {
-    private val main = FunSignature.create(funcDef.receiver != null, funcDef, functionTy)
+    private val main = FunSignature.create(false, funcDef, functionTy)
     override val mainSignature: IFunSignature = main
     override val signatures: Array<IFunSignature> = emptyArray()
     val structFunc = funcDef.receiver != null

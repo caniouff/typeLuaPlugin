@@ -25,7 +25,6 @@ import com.tang.intellij.lua.Constants
 import com.tang.intellij.lua.project.LuaSettings
 import com.tang.intellij.lua.psi.*
 import com.tang.intellij.lua.search.SearchContext
-import com.tang.intellij.lua.stubs.LuaFuncType
 import com.tang.intellij.lua.stubs.readSignatures
 import com.tang.intellij.lua.stubs.writeSignatures
 
@@ -436,6 +435,9 @@ class TyUnion : Ty(TyKind.Union) {
             }
             return ret
         }
+        fun <T : ITy> has(ty: ITy, clazz: Class<T>):Boolean {
+            return find(ty, clazz) != null
+        }
 
         fun process(ty: ITy, process: (ITy) -> Boolean) {
             if (ty is TyUnion) {
@@ -568,27 +570,34 @@ class TyFuncDef : Ty(TyKind.FuncDef) {
     }
 
     fun setParamsOrReturns(args :LuaArgs?, context: SearchContext) {
-        val tuple = getArgsTy(args, context)
         if (paramsArgs == null) {
-            paramsArgs = tuple
+            paramsArgs = getArgsTy(args, context, false)
         } else {
-            returnsArgs = tuple
+            returnsArgs = getArgsTy(args, context, true)
         }
     }
 
-    fun getArgsTy(args: LuaArgs?, context: SearchContext): ITy{
+    fun getArgsTy(args: LuaArgs?, context: SearchContext, bRet : Boolean): ITy{
         if (args == null) {
             return VOID
         }
 
         if ( args is LuaListArgs) {
-            return TyTuple(args.exprList.map {
+            val argTyList = ArrayList<ITy>()
+            val argReceiver = receiver
+            if (!bRet && argReceiver != null) {
+                argTyList.add(argReceiver)
+                TyUnion.find(argReceiver, TyStruct::class.java)?.let {
+                }
+            }
+            argTyList.addAll(args.exprList.map {
                 if (it is LuaLiteralExpr && it.kind == LuaLiteralKind.String) {
                     val typeFromValue = getBuiltin(it.text.trim('\"'))
                     return@map typeFromValue ?: UNKNOWN
                 }
                 return@map it.guessType(context)
             })
+            return TyTuple(argTyList.toList())
         }
 
         return UNKNOWN

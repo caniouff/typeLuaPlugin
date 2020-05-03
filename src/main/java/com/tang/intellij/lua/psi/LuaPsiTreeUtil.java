@@ -86,9 +86,11 @@ public class LuaPsiTreeUtil {
 
                 element = element.getParent();
             }
-
-            return aClass.cast(element);
+            if (aClass.isInstance(element)) {
+                return aClass.cast(element);
+            }
         }
+        return null;
     }
 
 

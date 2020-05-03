@@ -23,9 +23,12 @@ import com.intellij.psi.StubBuilder
 import com.intellij.psi.stubs.*
 import com.intellij.psi.tree.IStubFileElementType
 import com.intellij.util.io.StringRef
+import com.tang.intellij.lua.editor.structure.LuaFileElement
 import com.tang.intellij.lua.lang.LuaLanguage
 import com.tang.intellij.lua.lang.LuaParserDefinition
 import com.tang.intellij.lua.psi.LuaPsiFile
+import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
+import com.tang.intellij.lua.stubs.index.StubKeys
 
 /**
 
@@ -86,6 +89,14 @@ class LuaFileElementType : IStubFileElementType<LuaFileStub>(LuaLanguage.INSTANC
         return LuaFileStub(null, StringRef.toString(moduleRef))
     }
 
+    override fun indexStub(stub: PsiFileStub<*>, indexSink: IndexSink) {
+        if (stub is LuaFileStub) {
+            stub.module?.let {
+                indexSink.occurrence(StubKeys.SHORT_NAME, it)
+            }
+        }
+    }
+
     override fun getExternalId() = "lua.file"
 }
 
@@ -102,6 +113,10 @@ class LuaFileStub : PsiFileStubImpl<LuaPsiFile> {
 
     val module: String? get() {
         return moduleName
+    }
+
+    val psiFile : LuaPsiFile? get() {
+        return file
     }
 
     override fun getType(): LuaFileElementType = LuaParserDefinition.FILE

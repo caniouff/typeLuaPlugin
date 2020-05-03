@@ -93,7 +93,6 @@ fun resolveInFile(refName:String, pin: PsiElement, context: SearchContext?): Psi
 
     ret = ret ?: lastNameExpr
 
-
     return ret
 }
 

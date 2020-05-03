@@ -36,11 +36,13 @@ public class Constants {
     public static final String WORD_TABLE = "table";
     public static final String WORD_FUNCTION = "function";
     public static final String WORD_REQUIRE = "require";
+    public static final String WORD_IMPORT = "import";
     public static final String WORD_STRUCT = "struct";
     public static final String WORD_INTERFACE = "interface";
     public static final String WORD_FUNCDEF = "func";
     public static final String WORD_MAP = "map";
     public static final String WORD_LIST = "list";
+    public static final String WORD_NULLABLE = "nullable";
 
     public static final int ST_NONE = 0;
     public static final int ST_IMPLEMENT = 1;

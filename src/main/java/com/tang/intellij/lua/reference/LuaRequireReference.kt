@@ -20,6 +20,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReferenceBase
+import com.tang.intellij.lua.Constants
 import com.tang.intellij.lua.lang.type.LuaString
 import com.tang.intellij.lua.psi.LuaCallExpr
 import com.tang.intellij.lua.psi.LuaExprStat
@@ -76,10 +77,15 @@ class LuaRequireReference internal constructor(callExpr: LuaCallExpr) : PsiRefer
 
     fun setPath(luaPath: String) {
         if (path != null) {
-            val stat = LuaElementFactory.createWith(myElement.project, "require $quot$luaPath$quot") as LuaExprStat
-            val stringArg = (stat.expr as? LuaCallExpr)?.firstStringArg
-            if (stringArg != null)
-                path.replace(stringArg)
+            val requireStat = LuaElementFactory.createWith(myElement.project, "${Constants.WORD_REQUIRE} $quot$luaPath$quot") as LuaExprStat
+            val requireStringArg = (requireStat.expr as? LuaCallExpr)?.firstStringArg
+            if (requireStringArg != null)
+                path.replace(requireStringArg)
+
+            val importStat = LuaElementFactory.createWith(myElement.project, "${Constants.WORD_IMPORT} $quot$luaPath$quot") as LuaExprStat
+            val importStringArg = (importStat.expr as? LuaCallExpr)?.firstStringArg
+            if (importStringArg != null)
+                path.replace(importStringArg)
         }
     }
 

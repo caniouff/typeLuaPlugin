@@ -143,8 +143,8 @@ private fun LuaNameDef.infer(context: SearchContext): ITy {
             }
 
             //anonymous
-            if (type !is ITyPrimitive)
-                type = type.union(TyClass.createAnonymousType(this))
+//            if (type !is ITyPrimitive)
+//                type = type.union(TyClass.createAnonymousType(this))
         }
 
         val assignStat = PsiTreeUtil.getParentOfType(this, LuaAssignStat::class.java)

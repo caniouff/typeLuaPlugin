@@ -31,6 +31,7 @@ import com.tang.intellij.lua.lang.LuaFileType
 import com.tang.intellij.lua.lang.LuaLanguage
 import com.tang.intellij.lua.project.LuaSettings
 import com.tang.intellij.lua.stubs.LuaFileStub
+import com.tang.intellij.lua.stubs.index.LuaShortNameIndex
 
 /**
  * Created by TangZhiXu on 2015/11/15.
@@ -89,7 +90,7 @@ open class LuaPsiFile(fileViewProvider: FileViewProvider) : PsiFileBase(fileView
                     if (expr is LuaNameExpr && expr.textMatches(Constants.WORD_MODULE)) {
                         val stringArg = callExpr.firstStringArg
                         if (stringArg != null)
-                            return stringArg.text
+                            return stringArg.text.trim('\"')
                     }
                 }
             }

@@ -17,6 +17,7 @@
 package com.tang.intellij.lua.editor.completion
 
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.tree.TokenSet
 import com.intellij.util.Processor
 import com.tang.intellij.lua.Constants
@@ -24,6 +25,9 @@ import com.tang.intellij.lua.lang.LuaIcons
 import com.tang.intellij.lua.lang.LuaParserDefinition
 import com.tang.intellij.lua.psi.*
 import com.tang.intellij.lua.search.SearchContext
+import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
+import com.tang.intellij.lua.stubs.index.LuaShortNameIndex
+import com.tang.intellij.lua.stubs.index.LuaStructNameIndex
 import com.tang.intellij.lua.ty.*
 
 /**
@@ -110,15 +114,28 @@ class LocalAndGlobalCompletionProvider(private val mask: Int) : ClassMemberCompl
 
         //global
         val project = cur.project
+        val context = SearchContext(project)
         if (has(GLOBAL_FUN) || has(GLOBAL_VAR)) {
             addClass(TyClass.G, TyClass.G, project, MemberCompletionMode.Dot, completionResultSet, completionResultSet.prefixMatcher, null)
+            LuaShortNameIndex.instance.processAllKeys(project) {
+                if (StringUtil.isJavaIdentifier(it)) {
+                    val all = LuaShortNameIndex.instance.get(it, project, context.getScope())
+                    all.forEach {member->
+                        if (member is LuaPsiElement) {
+                            session.addWord(it)
+                            addCompletion(it, session, member)
+                        }
+                    }
+                }
+                true
+            }
         }
         //key words
         if (has(KEY_WORDS)) {
             for (keyWordToken in KEYWORD_TOKENS.types) {
                 session.addWord(keyWordToken.toString())
 
-                completionResultSet.addElement(LookupElementFactory.createKeyWordLookupElement(keyWordToken))
+                 completionResultSet.addElement(LookupElementFactory.createKeyWordLookupElement(keyWordToken))
             }
             for (primitiveToken in LuaParserDefinition.PRIMITIVE_TYPE_SET.types) {
                 session.addWord(primitiveToken.toString())

@@ -16,7 +16,7 @@
 
 <idea-plugin>
     <id>com.tang</id>
-    <name>EmmyLua</name>
+    <name>EmmyLuaForTypeLua</name>
     <version>1.2.6</version>
     <vendor email="love.tangzx@qq.com">tangzx</vendor>
     <category>Custom Languages</category>

@@ -160,7 +160,7 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
     }
     // 从 require 'xxx' 中获取返回类型
 
-    if (expr is LuaNameExpr && expr.name == Constants.WORD_REQUIRE) {
+    if (expr is LuaNameExpr && (expr.name == Constants.WORD_REQUIRE || expr.name == Constants.WORD_IMPORT)) {
         var filePath: String? = null
         val string = luaCallExpr.firstStringArg
         if (string is LuaLiteralExpr) {
@@ -232,6 +232,12 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
             }
             var base = listTypeExpr.guessType(context)
             return TyArray(base)
+        }
+    } else if (expr is LuaNameExpr && expr.name == Constants.WORD_NULLABLE) {
+        val argsExpr = luaCallExpr.args
+        if (argsExpr is LuaListArgs && argsExpr.exprList.size == 1) {
+            val listTypeExpr = argsExpr.exprList[0]
+            return listTypeExpr.guessType(context)
         }
     }
 

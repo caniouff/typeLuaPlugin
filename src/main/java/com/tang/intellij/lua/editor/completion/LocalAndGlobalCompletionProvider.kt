@@ -121,9 +121,9 @@ class LocalAndGlobalCompletionProvider(private val mask: Int) : ClassMemberCompl
                 if (StringUtil.isJavaIdentifier(it)) {
                     val all = LuaShortNameIndex.instance.get(it, project, context.getScope())
                     all.forEach {member->
-                        if (member is LuaPsiElement) {
-                            session.addWord(it)
-                            addCompletion(it, session, member)
+                        if (member is LuaPsiFile) {
+                            completionResultSet.addElement(
+                                    LookupElementFactory.createImportLookupElement(it, member, member.guessType(context)))
                         }
                     }
                 }

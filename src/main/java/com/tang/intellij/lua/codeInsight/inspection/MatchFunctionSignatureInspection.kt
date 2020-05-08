@@ -23,6 +23,7 @@ import com.intellij.psi.PsiElementVisitor
 import com.tang.intellij.lua.psi.*
 import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.ty.*
+import org.apache.http.impl.execchain.TunnelRefusedException
 
 class MatchFunctionSignatureInspection : StrictInspection() {
     data class ConcreteTypeInfo(val param: LuaExpr, val ty: ITy)
@@ -51,8 +52,9 @@ class MatchFunctionSignatureInspection : StrictInspection() {
                     val prefixExpr = o.expr
                     val type = prefixExpr.guessType(searchContext)
 
-                    if (type is ITyFunction) {
-                        val perfectSig = type.findPerfectSignature(o)
+                    val tyFunction = TyUnion.find(type, ITyFunction::class.java)
+                    if (tyFunction is ITyFunction) {
+                        val perfectSig = tyFunction.findPerfectSignature(o)
                         annotateCall(o, perfectSig, searchContext)
                     } else if (prefixExpr is LuaIndexExpr) {
                         // Get parent type

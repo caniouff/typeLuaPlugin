@@ -47,4 +47,12 @@ public class Constants {
     public static final int ST_NONE = 0;
     public static final int ST_IMPLEMENT = 1;
     public static final int ST_INTERFACE = 2;
+
+    public static Boolean IsStructDefWord(String word) {
+        return word.equals(WORD_STRUCT) || word.equals(WORD_INTERFACE);
+    }
+
+    public static Boolean IsImportPakWord(String word) {
+        return word.equals(WORD_REQUIRE) || word.equals(WORD_IMPORT);
+    }
 }

@@ -336,7 +336,6 @@ class TySerializedDocTable(name: String) : TySerializedClass(name)
 
 class TyStruct(nameExpr: LuaNameExpr?) : TyClass(getStructTypeName(nameExpr)) {
     var isInterface = false
-    var fieldTableTy :ITy? = null
 
     fun isImplementTo(tyInterface:ITyClass?, context: SearchContext):Boolean {
         if (tyInterface == null) {
@@ -345,22 +344,7 @@ class TyStruct(nameExpr: LuaNameExpr?) : TyClass(getStructTypeName(nameExpr)) {
         var isImplement = true
         tyInterface.processMembers(context) {_, m ->
             val name = m.name
-            var memberImplement = false
             if (name != null && findMember(name, context) != null) {
-                memberImplement = true
-            }
-
-            val tableTy = fieldTableTy
-            if (name != null && !memberImplement && tableTy != null) {
-                TyUnion.processStructField(tableTy, context) {
-                    if (it.findMember(name, context) != null) {
-                        memberImplement = true
-                        return@processStructField false
-                    }
-                    return@processStructField true
-                }
-            }
-            if (name != null && !memberImplement) {
                 isImplement = false
             }
         }

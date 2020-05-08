@@ -24,6 +24,7 @@ import com.intellij.psi.stubs.StubOutputStream
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.BitUtil
 import com.intellij.util.io.StringRef
+import com.tang.intellij.lua.Constants
 import com.tang.intellij.lua.psi.*
 import com.tang.intellij.lua.psi.impl.LuaTableFieldImpl
 import com.tang.intellij.lua.search.SearchContext
@@ -46,11 +47,16 @@ class LuaTableFieldType : LuaStubElementType<LuaTableFieldStub, LuaTableField>("
 
     private fun findTableExprTypeName(field: LuaTableField): String? {
         val table = PsiTreeUtil.getParentOfType(field, LuaTableExpr::class.java)
-        val p1 = table?.parent as? LuaExprList
-        val p2 = p1?.parent as? LuaAssignStat
+        val pe = table?.parent as? LuaExprList
+        val pc = PsiTreeUtil.getParentOfType(table, LuaCallExpr::class.java)
+        val pa = if (pc != null && Constants.IsStructDefWord(pc.expr.name)) {
+            PsiTreeUtil.getParentOfType(pc, LuaAssignStat::class.java)
+        } else {
+            pe?.parent as? LuaAssignStat
+        }
         var ty: String? = null
-        if (p2 != null) {
-            val type = p2.getExprAt(0)?.guessType(SearchContext(p2.project, field.containingFile, true))
+        if (pa != null) {
+            val type = pa.getExprAt(0)?.guessType(SearchContext(pa.project, field.containingFile, true))
             if (type != null) {
                 ty = TyUnion.getPerfectClass(type)?.className
             }

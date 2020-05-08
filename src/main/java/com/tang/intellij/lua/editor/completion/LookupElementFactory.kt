@@ -21,9 +21,8 @@ import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.psi.tree.IElementType
 import com.tang.intellij.lua.Constants
-import com.tang.intellij.lua.psi.LuaClassField
-import com.tang.intellij.lua.psi.LuaClassMember
-import com.tang.intellij.lua.psi.LuaPsiElement
+import com.tang.intellij.lua.lang.LuaIcons
+import com.tang.intellij.lua.psi.*
 import com.tang.intellij.lua.refactoring.LuaRefactoringUtil
 import com.tang.intellij.lua.ty.IFunSignature
 import com.tang.intellij.lua.ty.ITy
@@ -35,6 +34,10 @@ class LookupElementFactory {
 
         fun createKeyWordLookupElement(keyWordToken: IElementType): LookupElement {
             return LookupElementBuilder.create(keyWordToken).withInsertHandler(KeywordInsertHandler(keyWordToken))
+        }
+
+        fun createImportLookupElement(name: String, psi: LuaPsiFile, ty: ITy):LookupElement {
+            return LuaImportLookupElement(name, psi, ty, true, LuaIcons.MODULE)
         }
 
         fun createGuessableLookupElement(name: String, psi: LuaPsiElement, ty: ITy, icon: Icon): LookupElement {

@@ -160,7 +160,7 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
     }
     // 从 require 'xxx' 中获取返回类型
 
-    if (expr is LuaNameExpr && (expr.name == Constants.WORD_REQUIRE || expr.name == Constants.WORD_IMPORT)) {
+    if (expr is LuaNameExpr && Constants.IsImportPakWord(expr.name)) {
         var filePath: String? = null
         val string = luaCallExpr.firstStringArg
         if (string is LuaLiteralExpr) {
@@ -173,19 +173,16 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
             return file.guessType(context)
 
         return Ty.UNKNOWN
-    } else if (expr is LuaNameExpr && (expr.name == Constants.WORD_STRUCT) || expr.name == Constants.WORD_INTERFACE) {
+    } else if (expr is LuaNameExpr && Constants.IsStructDefWord(expr.name)) {
         val argsExpr = luaCallExpr.args
         if (argsExpr is LuaSingleArg) {
-            var argsType = argsExpr.expr.guessType(context)
             val assignStat = PsiTreeUtil.getParentOfType(this, LuaAssignStat::class.java)
             val nameExpr = assignStat?.varExprList?.exprList?.get(0)
             if (nameExpr != null && nameExpr is LuaNameExpr) {
                 var tyStruct = TyStruct(nameExpr)
                 tyStruct.isInterface = (expr.name == Constants.WORD_INTERFACE)
-                tyStruct.fieldTableTy = argsType
-                argsType = argsType.union(tyStruct)
+                return tyStruct
             }
-            return argsType
         }
     } else if (expr is LuaNameExpr && expr.name == Constants.WORD_FUNCDEF) {
         val argsExpr = luaCallExpr.args
@@ -338,12 +335,7 @@ private fun getType(context: SearchContext, def: PsiElement): ITy {
                     }
                 }
             }
-
-            //Global
-            if (isGlobal(def) && type !is ITyPrimitive ) {
-                //use globalClassTy to store class members, that's very important
-                type = type.union(TyClass.createGlobalType(def, context.forStore))
-            }
+            
             return type
         }
         is LuaTypeGuessable -> return def.guessType(context)
@@ -426,17 +418,6 @@ private fun LuaIndexExpr.infer(context: SearchContext): ITy {
         if (propName != null) {
             val prefixType = parentTy ?: indexExpr.guessParentType(context)
 
-            val isStruct = TyUnion.has(prefixType, TyStruct::class.java)
-            if (isStruct) {
-                TyUnion.processStructUnion(prefixType, context) {
-                    val fieldType = guessFieldType(propName, it, context)
-                    if (fieldType != Ty.UNKNOWN) {
-                        result = fieldType
-                        return@processStructUnion false
-                    }
-                    true
-                }
-            }
             prefixType.eachTopClass(Processor {
                 result = result.union(guessFieldType(propName, it, context))
                 true

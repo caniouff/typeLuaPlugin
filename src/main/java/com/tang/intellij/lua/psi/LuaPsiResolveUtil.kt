@@ -165,14 +165,6 @@ fun resolve(indexExpr: LuaIndexExpr, idString: String, context: SearchContext): 
         true
     })
 
-    if (ret == null) {
-        TyUnion.processStructUnion(type, context){
-            ret = it.findMember(idString, context)
-            if (ret != null)
-                return@processStructUnion false
-            true
-        }
-    }
     return ret
 }
 

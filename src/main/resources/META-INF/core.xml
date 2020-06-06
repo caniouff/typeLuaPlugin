@@ -85,6 +85,7 @@
         <inlineActionHandler implementation="com.tang.intellij.lua.refactoring.inline.LuaInlineActionHandler"/>
         <moveFileHandler implementation="com.tang.intellij.lua.refactoring.move.LuaMoveFileHandler"/>
         <renameInputValidator implementation="com.tang.intellij.lua.refactoring.rename.LuaDocClassRenameInputValidator"/>
+        <codeInsight.implementMethod language="Lua" implementationClass="com.tang.intellij.lua.editor.LuaImplementMethodsHandler"/>
 
         <!--navigate-->
         <gotoClassContributor implementation="com.tang.intellij.lua.editor.LuaClassNavigationContributor"/>
@@ -103,7 +104,7 @@
         <highlightVisitor implementation="com.tang.intellij.lua.codeInsight.LuaRainbowVisitor"/>
         <highlightUsagesHandlerFactory implementation="com.tang.intellij.lua.codeInsight.highlighting.LuaHighlightUsagesHandlerFactory"/>
         <readWriteAccessDetector implementation="com.tang.intellij.lua.codeInsight.LuaReadWriteAccessDetector"/>
-        
+
         <!--hierarchy-->
         <callHierarchyProvider language="Lua" implementationClass="com.tang.intellij.lua.hierarchy.call.LuaCallHierarchyProvider"/>
 

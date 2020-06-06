@@ -317,5 +317,6 @@ private fun resolveParamType(paramNameDef: LuaParamNameDef, context: SearchConte
             return shouldBe.mainSignature.getParamTy(paramIndex)
         }
     }
+
     return Ty.UNKNOWN
 }

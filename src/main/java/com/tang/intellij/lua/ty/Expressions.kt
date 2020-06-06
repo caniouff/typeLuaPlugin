@@ -66,6 +66,7 @@ private fun LuaBinaryExpr.infer(context: SearchContext): ITy {
     var ty: ITy = Ty.UNKNOWN
     operator.let {
         ty = when (it) {
+            LuaTypes.LE -> guessLessThenType(this, context)
         //..
             LuaTypes.CONCAT -> Ty.STRING
         //<=, ==, <, ~=, >=, >
@@ -79,6 +80,24 @@ private fun LuaBinaryExpr.infer(context: SearchContext): ITy {
         }
     }
     return ty
+}
+
+private fun getBinaryExprOpType(binaryExpr: LuaBinaryExpr):IElementType? {
+    val stub = binaryExpr.stub
+    return if (stub != null) stub.opType else {
+        val firstChild = binaryExpr.firstChild
+        val nextVisibleLeaf = PsiTreeUtil.nextVisibleLeaf(firstChild)
+        nextVisibleLeaf?.node?.elementType
+    }
+}
+
+private fun guessLessThenType(binaryExpr: LuaBinaryExpr, context: SearchContext):ITy {
+    val leftType = binaryExpr.left?.guessType(context)
+    val rightType = binaryExpr.right?.guessType(context)
+    if (leftType is TyFuncDef && rightType is TyFunction) {
+        return TyFuncDefPsiFunction(leftType, rightType)
+    }
+    return Ty.BOOLEAN
 }
 
 private fun guessAndOrType(binaryExpr: LuaBinaryExpr, operator: IElementType?, context:SearchContext): ITy {
@@ -186,12 +205,14 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
         }
     } else if (expr is LuaNameExpr && expr.name == Constants.WORD_FUNCDEF) {
         val argsExpr = luaCallExpr.args
-
+        val binaryExpr = PsiTreeUtil.getParentOfType(this, LuaBinaryExpr::class.java)
         if (argsExpr is LuaListArgs) {
             if (argsExpr.exprList.size == 1) {
                 val arg = argsExpr.exprList[0]
                 val def = TyFuncDef()
-                if (arg.name == "_") {//module or global
+                if (binaryExpr!= null && LuaTypes.LE == getBinaryExprOpType(binaryExpr)) {
+                    def.setParamsOrReturns(args, context)
+                } else if (arg.name == "_") {//module or global
                     def.moduleName = expr.moduleName
                     def.global = expr.moduleName == null
                 } else {
@@ -335,7 +356,7 @@ private fun getType(context: SearchContext, def: PsiElement): ITy {
                     }
                 }
             }
-            
+
             return type
         }
         is LuaTypeGuessable -> return def.guessType(context)

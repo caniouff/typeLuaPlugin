@@ -243,6 +243,16 @@ abstract class Ty(override val kind: TyKind) : ITy {
             }
         }
 
+        fun toDocument(iTy: ITy?):String {
+            if (iTy != null) {
+                if (iTy is ITyPrimitive) {
+                    return "\"${iTy.displayName}\""
+                }
+                return iTy.displayName
+            }
+            return "null"
+        }
+
         fun create(name: String): ITy {
             return getBuiltin(name) ?: TyLazyClass(name)
         }
@@ -613,6 +623,7 @@ class TyFuncDef : Ty(TyKind.FuncDef) {
                 if (idx < signature.params.size) {
                     p.name = signature.params[idx].name
                 }
+                p.isSelf = idx == 0 && receiver != null
                 p.ty = it
                 idx ++
                 p

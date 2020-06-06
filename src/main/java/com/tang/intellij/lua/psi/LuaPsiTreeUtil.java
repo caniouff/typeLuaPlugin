@@ -16,6 +16,7 @@
 
 package com.tang.intellij.lua.psi;
 
+import com.intellij.diagnostic.logging.LogConsole;
 import com.intellij.psi.PsiComment;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;

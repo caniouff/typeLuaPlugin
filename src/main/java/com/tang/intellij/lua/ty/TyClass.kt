@@ -344,7 +344,7 @@ class TyStruct(nameExpr: LuaNameExpr?) : TyClass(getStructTypeName(nameExpr)) {
         var isImplement = true
         tyInterface.processMembers(context) {_, m ->
             val name = m.name
-            if (name != null && findMember(name, context) != null) {
+            if (name != null && findMember(name, context) == null) {
                 isImplement = false
             }
         }

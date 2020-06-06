@@ -71,6 +71,16 @@ fun LuaExpr.shouldBe(context: SearchContext): ITy {
         val p2 = p1.parent
         if (p2 is LuaCallExpr) {
             val idx = p1.getIndexFor(this)
+
+            val funcType = p2.expr.guessType(context)
+            if (funcType is TyFuncDefPsiFunction) {
+                val params = funcType.mainSignature.params
+                if (funcType.structFunc) {
+                    return params[idx + 1].ty
+                }
+                return params[idx].ty
+            }
+
             val fTy = infer(p2.expr, context)
             var ret: ITy = Ty.UNKNOWN
             fTy.each {
@@ -82,6 +92,7 @@ fun LuaExpr.shouldBe(context: SearchContext): ITy {
                     ret = ret.union(sig.getParamTy(idx))
                 }
             }
+
             return ret
         }
     }

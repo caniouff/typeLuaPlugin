@@ -266,6 +266,12 @@ fun getStructTypeName(nameExpr: LuaNameExpr?): String {
     }
     return nameExpr.name
 }
+fun getEnumTypeName(nameExpr: LuaNameExpr?): String {
+    if (nameExpr == null) {
+        return "(anonymous)Enum"
+    }
+    return "[Enum]${nameExpr.name}"
+}
 
 fun getInterfaceName(nameExpr: LuaNameExpr?): String {
     if (nameExpr == null) {
@@ -351,3 +357,5 @@ class TyStruct(nameExpr: LuaNameExpr?) : TyClass(getStructTypeName(nameExpr)) {
         return isImplement
     }
 }
+
+class TyEnum(nameExpr: LuaNameExpr?): TyClass(getEnumTypeName(nameExpr))

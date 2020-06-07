@@ -178,6 +178,10 @@ private fun LuaTableField.infer(context: SearchContext): ITy {
     if (docTy != null)
         return docTy
 
+    if (isEnumField) {
+        return TyPrimitive(TyPrimitiveKind.Number, "${findFieldName(this)}:$enumValue")
+    }
+
     val valueExpr = valueExpr
     if (valueExpr is LuaLiteralExpr && valueExpr.kind == LuaLiteralKind.String ) {
         val typeFromValue = Ty.getBuiltin(valueExpr.text.trim('\"'))

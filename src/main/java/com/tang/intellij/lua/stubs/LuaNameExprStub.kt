@@ -26,8 +26,8 @@ import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
 import com.tang.intellij.lua.stubs.index.StubKeys
 import com.tang.intellij.lua.ty.ITy
+import com.tang.intellij.lua.ty.TyEnum
 import com.tang.intellij.lua.ty.TyStruct
-import com.tang.intellij.lua.ty.TyUnion
 
 /**
  * name expr stub
@@ -53,10 +53,10 @@ class LuaNameExprType : LuaStubElementType<LuaNameExprStub, LuaNameExpr>("NAME_E
         var structType = Constants.ST_NONE
 
         val guessType = luaNameExpr.guessType(searchContext)
-        TyUnion.each(guessType) {
-            if (it is TyStruct) {
-                structType = if(it.isInterface) Constants.ST_INTERFACE else Constants.ST_IMPLEMENT
-            }
+        if (guessType is TyStruct) {
+            structType = if(guessType.isInterface) Constants.ST_INTERFACE else Constants.ST_IMPLEMENT
+        } else if (guessType is TyEnum) {
+            structType = Constants.ST_ENUM
         }
         return LuaNameExprStubImpl(name,
                 module,
@@ -73,7 +73,7 @@ class LuaNameExprType : LuaStubElementType<LuaNameExprStub, LuaNameExpr>("NAME_E
         stream.writeName(stub.module)
         stream.writeBoolean(stub.isName)
         stream.writeBoolean(stub.isGlobal)
-        stream.writeInt(stub.structType)
+        stream.writeInt(stub.specType)
         stream.writeTyNullable(stub.docTy)
     }
 
@@ -102,10 +102,10 @@ class LuaNameExprType : LuaStubElementType<LuaNameExprStub, LuaNameExpr>("NAME_E
 
             indexSink.occurrence(StubKeys.SHORT_NAME, luaNameStub.name)
 
-            if (luaNameStub.structType == Constants.ST_IMPLEMENT) {
-                indexSink.occurrence(StubKeys.STRUCT, luaNameStub.name)
-            } else if(luaNameStub.structType == Constants.ST_INTERFACE) {
-                indexSink.occurrence(StubKeys.INTERFACE, luaNameStub.name)
+            when(luaNameStub.specType) {
+                Constants.ST_IMPLEMENT -> indexSink.occurrence(StubKeys.STRUCT, luaNameStub.name)
+                Constants.ST_INTERFACE -> indexSink.occurrence(StubKeys.INTERFACE, luaNameStub.name)
+                Constants.ST_ENUM -> indexSink.occurrence(StubKeys.ENUM, luaNameStub.name)
             }
         }
     }
@@ -116,7 +116,7 @@ interface LuaNameExprStub : LuaExprStub<LuaNameExpr>, LuaDocTyStub {
     val module: String
     val isName: Boolean
     val isGlobal: Boolean
-    val structType: Int
+    val specType: Int
 }
 
 class LuaNameExprStubImpl(
@@ -124,7 +124,7 @@ class LuaNameExprStubImpl(
         override val module: String,
         override val isName: Boolean,
         override val isGlobal: Boolean,
-        override val structType: Int,
+        override val specType: Int,
         override val docTy: ITy?,
         parent: StubElement<*>,
         elementType: LuaStubElementType<*, *>

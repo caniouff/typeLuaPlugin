@@ -192,7 +192,7 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
             return file.guessType(context)
 
         return Ty.UNKNOWN
-    } else if (expr is LuaNameExpr && Constants.IsStructDefWord(expr.name)) {
+    } else if (expr is LuaNameExpr && Constants.IsStructOrInterfaceDefWord(expr.name)) {
         val argsExpr = luaCallExpr.args
         if (argsExpr is LuaSingleArg) {
             val assignStat = PsiTreeUtil.getParentOfType(this, LuaAssignStat::class.java)
@@ -256,6 +256,15 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
         if (argsExpr is LuaListArgs && argsExpr.exprList.size == 1) {
             val listTypeExpr = argsExpr.exprList[0]
             return listTypeExpr.guessType(context)
+        }
+    } else if (expr is LuaNameExpr && expr.name == Constants.WORD_ENUM) {
+        val argsExpr = luaCallExpr.args
+        if (argsExpr is LuaSingleArg) {
+            val assignStat = PsiTreeUtil.getParentOfType(this, LuaAssignStat::class.java)
+            val nameExpr = assignStat?.varExprList?.exprList?.get(0)
+            if (nameExpr != null && nameExpr is LuaNameExpr) {
+                return TyEnum(nameExpr)
+            }
         }
     }
 

@@ -54,7 +54,12 @@ import com.twelvemonkeys.util.CollectionUtil
  */
 class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettings, private val colorsManager:EditorColorsManager) : LineMarkerProvider {
 
+    var elementsMarkMap = HashMap<PsiElement, Boolean>()
     private fun collectNavigationMarkers(element: PsiElement, result: MutableCollection<in LineMarkerInfo<*>>) {
+        if (elementsMarkMap.containsKey(element)) {
+            return
+        }
+        elementsMarkMap[element] = true
         if (element is LuaClassMethodName) {
             val methodDef = PsiTreeUtil.getParentOfType(element, LuaClassMethod::class.java)!!
             val project = methodDef.project
@@ -251,6 +256,13 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
                     }
                 }
             }
+        } else if (element is LuaNameExpr) {
+            if (element.name == Constants.WORD_STRUCT || element.name == Constants.WORD_INTERFACE) {
+                val callExpr = PsiTreeUtil.getParentOfType(element, LuaCallExpr::class.java)
+                if (callExpr != null) {
+                    //collectNavigationMarkers(callExpr, result)
+                }
+            }
         }
     }
 
@@ -259,13 +271,14 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
     }
 
     override fun collectSlowLineMarkers(list: List<PsiElement>, collection: MutableCollection<LineMarkerInfo<*>>) {
+        elementsMarkMap.clear()
         for (element in list) {
             ProgressManager.checkCanceled()
             collectNavigationMarkers(element, collection)
         }
     }
 
-    fun collectStructImplementInterfaces(tyStruct: TyStruct, project: Project, context: SearchContext): ArrayList<LuaTypeGuessable> {
+    private fun collectStructImplementInterfaces(tyStruct: TyStruct, project: Project, context: SearchContext): ArrayList<LuaTypeGuessable> {
         val interfaceTargets = ArrayList<LuaTypeGuessable>()
         LuaInterfaceNameIndex.instance.processAllKeys(project) {
             val all = LuaInterfaceNameIndex.instance.get(it, context.project, context.getScope())
@@ -285,7 +298,7 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
         return interfaceTargets
     }
 
-    fun collectImplementInterfaceStructs(tyInteface: TyStruct, project: Project, context: SearchContext): ArrayList<LuaTypeGuessable> {
+    private fun collectImplementInterfaceStructs(tyInteface: TyStruct, project: Project, context: SearchContext): ArrayList<LuaTypeGuessable> {
         val structTargets = ArrayList<LuaTypeGuessable>()
         LuaStructNameIndex.instance.processAllKeys(project) {
             val all = LuaStructNameIndex.instance.get(it, context.project, context.getScope())
@@ -305,7 +318,7 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
         return structTargets
     }
 
-    fun collectFunInStructs(tyStructs : ArrayList<LuaTypeGuessable>, name : String, context: SearchContext) : ArrayList<LuaTypeGuessable> {
+    private fun collectFunInStructs(tyStructs : ArrayList<LuaTypeGuessable>, name : String, context: SearchContext) : ArrayList<LuaTypeGuessable> {
         val funTargets = ArrayList<LuaTypeGuessable>()
         if (name != "") {
             tyStructs.forEach {

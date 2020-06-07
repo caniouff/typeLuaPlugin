@@ -29,5 +29,5 @@ object StubKeys {
     val SUPER_CLASS = StubIndexKey.createIndexKey<String, LuaDocTagClass>("lua.index.super_class")
     val STRUCT = StubIndexKey.createIndexKey<String, LuaTypeGuessable>("lua.index.struct")
     val INTERFACE = StubIndexKey.createIndexKey<String, LuaTypeGuessable>("lua.index.interface")
-
+    val ENUM = StubIndexKey.createIndexKey<String, LuaTypeGuessable>("lua.index.enum")
 }

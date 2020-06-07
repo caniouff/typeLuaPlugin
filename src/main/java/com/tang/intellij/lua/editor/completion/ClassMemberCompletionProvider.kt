@@ -121,7 +121,7 @@ open class ClassMemberCompletionProvider : LuaCompletionProvider() {
         luaType.lazyInit(context)
         luaType.processMembers(context) { curType, member ->
             ProgressManager.checkCanceled()
-            member.name?.let {
+            member.memberName?.let {
                 if (prefixMatcher.prefixMatches(it) && curType.isVisibleInScope(project, contextTy, member.visibility)) {
                     addMember(completionResultSet,
                             member,
@@ -159,7 +159,7 @@ open class ClassMemberCompletionProvider : LuaCompletionProvider() {
                            field: LuaClassField,
                            ty:ITy?,
                            handlerProcessor: HandlerProcessor?) {
-        val name = field.name
+        val name = field.memberName
         if (name != null) {
             val element = LookupElementFactory.createFieldLookupElement(clazzName, name, field, ty, bold)
             val ele = handlerProcessor?.process(element, field, null) ?: element

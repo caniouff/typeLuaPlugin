@@ -178,7 +178,7 @@ class LuaImplementMethodsHandler : LanguageCodeInsightActionHandler {
                 val valueExpr = it.valueExprList?.exprList?.get(0)
                 valueExpr?.let { _ ->
                     if (valueExpr is LuaCallExpr && valueExpr.isFunctionCall &&
-                            Constants.IsStructDefWord(valueExpr.expr.name))
+                            valueExpr.expr.name == Constants.WORD_STRUCT)
                         elementList.add(it.varExprList.exprList[0])
                 }
             }

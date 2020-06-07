@@ -25,9 +25,10 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Processor
+import com.tang.intellij.lua.Constants
 import com.tang.intellij.lua.comment.LuaCommentUtil
-import com.tang.intellij.lua.comment.psi.LuaDocTagClass
 import com.tang.intellij.lua.comment.psi.LuaDocGenericDef
+import com.tang.intellij.lua.comment.psi.LuaDocTagClass
 import com.tang.intellij.lua.comment.psi.LuaDocTagOverload
 import com.tang.intellij.lua.comment.psi.api.LuaComment
 import com.tang.intellij.lua.lang.type.LuaString
@@ -35,6 +36,8 @@ import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.LuaFuncBodyOwnerStub
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
 import com.tang.intellij.lua.ty.*
+import org.nfunk.jep.JEP
+import kotlin.collections.HashMap
 
 /**
  * 1.
@@ -379,6 +382,9 @@ val LuaNameExpr.docTy: ITy? get() {
 }
 
 private val KEY_SHOULD_CREATE_STUB = Key.create<CachedValue<Boolean>>("lua.should_create_stub")
+private val KEY_IS_ENUM_FIELD = Key.create<CachedValue<Boolean>>("lua.is_enum_field")
+private val KEY_ENUM_VALUES = Key.create<CachedValue<Map<LuaTableField, Int>>>("lua.enum_values")
+private val KEY_FIELD_ENUM_VALUE = Key.create<CachedValue<Int>>("lua.field_enum_value")
 
 // { field = valueExpr }
 // { valueExpr }
@@ -393,7 +399,10 @@ val LuaTableField.shouldCreateStub: Boolean get() =
         CachedValueProvider.Result.create(innerShouldCreateStub, this)
     }
 
+
 private val LuaTableField.innerShouldCreateStub: Boolean get() {
+    if (isEnumField)
+        return true
     if (id == null && idExpr == null)
         return false
     if (name == null)
@@ -404,10 +413,45 @@ private val LuaTableField.innerShouldCreateStub: Boolean get() {
     return tableExpr.shouldCreateStub
 }
 
+val LuaTableField.isEnumField: Boolean get() =
+    CachedValuesManager.getCachedValue(this, KEY_IS_ENUM_FIELD) {
+        CachedValueProvider.Result.create(innerIsEnumField, this)
+    }
+
+
+private val LuaTableField.innerIsEnumField: Boolean get() {
+    val table = PsiTreeUtil.getParentOfType(this, LuaTableExpr::class.java)
+    val pc = PsiTreeUtil.getParentOfType(table, LuaCallExpr::class.java)
+    if (pc != null && pc.expr.name == Constants.WORD_ENUM) {
+        val valueExpr = this.valueExpr
+        if (valueExpr is LuaLiteralExpr && valueExpr.kind == LuaLiteralKind.String) {
+            return true
+        }
+    }
+    return false
+}
+
+val LuaTableField.enumValue : Int get() =
+    CachedValuesManager.getCachedValue(this, KEY_FIELD_ENUM_VALUE) {
+        CachedValueProvider.Result.create(innerEnumValue, this)
+    }
+
+private val LuaTableField.innerEnumValue: Int get() {
+    if (!isEnumField) {
+        return 0
+    }
+
+    val table = PsiTreeUtil.getParentOfType(this, LuaTableExpr::class.java)
+
+    val fieldValues = table?.enumValues
+    return fieldValues?.get(this) ?: 0
+}
+
 val LuaTableExpr.shouldCreateStub: Boolean get() =
     CachedValuesManager.getCachedValue(this, KEY_SHOULD_CREATE_STUB) {
         CachedValueProvider.Result.create(innerShouldCreateStub, this)
     }
+
 
 private val LuaTableExpr.innerShouldCreateStub: Boolean get() {
     val pt = parent
@@ -422,6 +466,44 @@ private val LuaTableExpr.innerShouldCreateStub: Boolean get() {
         }
         else-> true
     }
+}
+
+val LuaTableExpr.enumValues:Map<LuaTableField, Int> get() =
+    CachedValuesManager.getCachedValue(this, KEY_ENUM_VALUES) {
+        CachedValueProvider.Result.create(innerEnumValues, this)
+    }
+
+private fun calcIotaValue(expr:LuaExpr?, iotaValue:Int):Int {
+    if (expr == null || expr.text.isEmpty()) {
+        return iotaValue
+    }
+    val jep = JEP()
+    jep.addVariable("iota", iotaValue.toDouble())
+    jep.parseExpression(expr.text)
+    return jep.value.toInt()
+}
+
+private val LuaTableExpr.innerEnumValues:Map<LuaTableField, Int> get() {
+    val values = HashMap<LuaTableField, Int>()
+    var curValue = 1
+    var curExpr:LuaExpr? = null
+    var lastField:LuaTableField? = null
+    tableFieldList.forEach {
+        if(it.isEnumField) {
+            values[it] = calcIotaValue(curExpr, curValue)
+            lastField = it
+            curValue ++
+        } else {
+            curValue = 1
+            curExpr = it.valueExpr
+            val field = lastField
+            if (field != null) {
+                values[field] = calcIotaValue(curExpr, curValue)
+            }
+            curValue ++
+        }
+    }
+    return values
 }
 
 private val KEY_FORWARD = Key.create<CachedValue<PsiElement>>("lua.lua_func_def.forward")
@@ -452,6 +534,25 @@ val LuaBinaryExpr.right: LuaExpr? get() {
     return list.getOrNull(1)
 }
 
+fun findFieldName(field: LuaTableField):String? {
+    var result : String? = ""
+    if (field.isEnumField) {
+        val valueExpr = field.valueExpr
+        if (valueExpr is LuaLiteralExpr && valueExpr.kind == LuaLiteralKind.String) {
+            result = valueExpr.stringValue.trim('\"')
+        }
+    } else {
+        result = field.fieldName
+    }
+    return result
+}
+
+val LuaClassMember.memberName: String? get() {
+    if (this is LuaTableField && isEnumField) {
+        return findFieldName(this)
+    }
+    return name
+}
 fun LuaClassMethod.findOverridingMethod(context: SearchContext): LuaClassMethod? {
     val methodName = name ?: return null
 

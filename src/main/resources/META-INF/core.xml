@@ -133,6 +133,7 @@
         <stubIndex implementation="com.tang.intellij.lua.stubs.index.LuaClassIndex"/>
         <stubIndex implementation="com.tang.intellij.lua.stubs.index.LuaStructNameIndex"/>
         <stubIndex implementation="com.tang.intellij.lua.stubs.index.LuaInterfaceNameIndex"/>
+        <stubIndex implementation="com.tang.intellij.lua.stubs.index.LuaEnumNameIndex"/>
         <stubIndex implementation="com.tang.intellij.lua.stubs.index.LuaClassMemberIndex"/>
         <stubIndex implementation="com.tang.intellij.lua.stubs.index.LuaShortNameIndex"/>
         <stubIndex implementation="com.tang.intellij.lua.stubs.index.LuaSuperClassIndex"/>

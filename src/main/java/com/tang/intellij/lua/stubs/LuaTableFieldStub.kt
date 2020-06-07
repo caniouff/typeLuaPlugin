@@ -49,7 +49,7 @@ class LuaTableFieldType : LuaStubElementType<LuaTableFieldStub, LuaTableField>("
         val table = PsiTreeUtil.getParentOfType(field, LuaTableExpr::class.java)
         val pe = table?.parent as? LuaExprList
         val pc = PsiTreeUtil.getParentOfType(table, LuaCallExpr::class.java)
-        val pa = if (pc != null && Constants.IsStructDefWord(pc.expr.name)) {
+        val pa = if (pc != null && Constants.IsSpecTypeDefWord(pc.expr.name)) {
             PsiTreeUtil.getParentOfType(pc, LuaAssignStat::class.java)
         } else {
             pe?.parent as? LuaAssignStat
@@ -70,7 +70,7 @@ class LuaTableFieldType : LuaStubElementType<LuaTableFieldStub, LuaTableField>("
         val ty = field.comment?.docTy
         val flags = BitUtil.set(0, FLAG_DEPRECATED, field.isDeprecated)
         return LuaTableFieldStubImpl(ty,
-                field.fieldName,
+                findFieldName(field),
                 findTableExprTypeName(field),
                 flags,
                 parentStub,
@@ -102,7 +102,6 @@ class LuaTableFieldType : LuaStubElementType<LuaTableFieldStub, LuaTableField>("
         val typeName = fieldStub.typeName
         if (fieldName != null && typeName != null) {
             LuaClassMemberIndex.indexStub(indexSink, typeName, fieldName)
-
             indexSink.occurrence(StubKeys.SHORT_NAME, fieldName)
         }
     }

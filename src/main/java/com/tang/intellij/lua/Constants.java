@@ -43,13 +43,19 @@ public class Constants {
     public static final String WORD_MAP = "map";
     public static final String WORD_LIST = "list";
     public static final String WORD_NULLABLE = "nullable";
+    public static final String WORD_ENUM = "enum";
 
     public static final int ST_NONE = 0;
     public static final int ST_IMPLEMENT = 1;
     public static final int ST_INTERFACE = 2;
+    public static final int ST_ENUM = 3;
 
-    public static Boolean IsStructDefWord(String word) {
+    public static Boolean IsStructOrInterfaceDefWord(String word) {
         return word.equals(WORD_STRUCT) || word.equals(WORD_INTERFACE);
+    }
+
+    public static Boolean IsSpecTypeDefWord(String word) {
+        return word.equals(WORD_STRUCT) || word.equals(WORD_INTERFACE) || word.equals(WORD_ENUM);
     }
 
     public static Boolean IsImportPakWord(String word) {

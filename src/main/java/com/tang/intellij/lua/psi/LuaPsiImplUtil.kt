@@ -586,6 +586,8 @@ fun guessReturnType(returnStat: LuaReturnStat?, index: Int, context: SearchConte
                 else
                     returnExpr.guessTypeAt(context)
             }
+        } else {
+            return TyTuple(emptyList())
         }
     }
     return Ty.UNKNOWN

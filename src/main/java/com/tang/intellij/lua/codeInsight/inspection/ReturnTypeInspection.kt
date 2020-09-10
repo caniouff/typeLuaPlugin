@@ -23,9 +23,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.tang.intellij.lua.psi.*
 import com.tang.intellij.lua.search.SearchContext
-import com.tang.intellij.lua.ty.ITy
-import com.tang.intellij.lua.ty.Ty
-import com.tang.intellij.lua.ty.TyTuple
+import com.tang.intellij.lua.ty.*
 
 class ReturnTypeInspection : StrictInspection() {
     override fun buildVisitor(myHolder: ProblemsHolder, isOnTheFly: Boolean, session: LocalInspectionToolSession): PsiElementVisitor =
@@ -39,6 +37,8 @@ class ReturnTypeInspection : StrictInspection() {
                     val bodyOwner = PsiTreeUtil.getParentOfType(o, LuaFuncBodyOwner::class.java) ?: return
                     val abstractType = if (bodyOwner is LuaClassMethodDef) {
                         guessSuperReturnTypes(bodyOwner, context)
+                    } else if (bodyOwner is LuaClosureExpr) {
+                        guessClosureReturnTypes(bodyOwner, context)
                     } else {
                         val returnDef = (bodyOwner as? LuaCommentOwner)?.comment?.tagReturn
                         returnDef?.type
@@ -92,6 +92,14 @@ class ReturnTypeInspection : StrictInspection() {
                         } else {
                             return comment.tagReturn?.type
                         }
+                    }
+                    return null
+                }
+
+                private fun guessClosureReturnTypes(closureExpr: LuaClosureExpr, context: SearchContext): ITy? {
+                    val shouldBe = closureExpr.shouldBe(context)
+                    if (shouldBe is ITyFunction) {
+                        return shouldBe.mainSignature.returnTy
                     }
                     return null
                 }

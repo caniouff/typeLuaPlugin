@@ -26,9 +26,11 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Processor
 import com.tang.intellij.lua.Constants
+import com.tang.intellij.lua.lang.LuaLanguageLevel
 import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
 import com.tang.intellij.lua.ty.*
+import org.intellij.lang.annotations.Language
 
 internal fun resolveFuncBodyOwner(ref: LuaNameExpr, context: SearchContext): LuaFuncBodyOwner? {
     var ret:LuaFuncBodyOwner? = null
@@ -128,6 +130,13 @@ fun resolve(nameExpr: LuaNameExpr, context: SearchContext): PsiElement? {
             resolveResult = it
             false
         })
+
+        if (resolveResult == null && nameExpr.languageLevel <= LuaLanguageLevel.LUA51) {
+            LuaClassMemberIndex.process(Constants.WORD_G, refName, context, Processor {
+                resolveResult = it
+                false
+            })
+        }
     }
 
     return resolveResult

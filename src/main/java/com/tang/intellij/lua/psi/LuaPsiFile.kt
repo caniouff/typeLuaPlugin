@@ -60,7 +60,6 @@ open class LuaPsiFile(fileViewProvider: FileViewProvider) : PsiFileBase(fileView
             val stub = stub as? LuaFileStub
             return if (stub != null) stub.module else findCachedModuleName()
         }
-
     /**
      * Lua language version
      */
@@ -87,7 +86,7 @@ open class LuaPsiFile(fileViewProvider: FileViewProvider) : PsiFileBase(fileView
                 if (child is LuaExprStat) { // module("name")
                     val callExpr = child.expr as? LuaCallExpr
                     val expr = callExpr?.expr
-                    if (expr is LuaNameExpr && expr.textMatches(Constants.WORD_MODULE)) {
+                    if (expr is LuaNameExpr && Constants.IsPackageWord(expr.text)) {
                         val stringArg = callExpr.firstStringArg
                         if (stringArg != null)
                             return stringArg.text.trim('\"')

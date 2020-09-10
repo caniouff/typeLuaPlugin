@@ -44,6 +44,7 @@ public class Constants {
     public static final String WORD_LIST = "list";
     public static final String WORD_NULLABLE = "nullable";
     public static final String WORD_ENUM = "enum";
+    public static final String WORD_PACKAGE = "package";
 
     public static final int ST_NONE = 0;
     public static final int ST_IMPLEMENT = 1;
@@ -60,5 +61,9 @@ public class Constants {
 
     public static Boolean IsImportPakWord(String word) {
         return word.equals(WORD_REQUIRE) || word.equals(WORD_IMPORT);
+    }
+
+    public static Boolean IsPackageWord(String word) {
+        return word.equals(WORD_MODULE) || word.equals(WORD_PACKAGE);
     }
 }

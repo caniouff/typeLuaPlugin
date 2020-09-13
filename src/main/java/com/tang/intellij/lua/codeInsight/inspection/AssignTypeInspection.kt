@@ -21,10 +21,15 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
 import com.tang.intellij.lua.psi.LuaAssignStat
 import com.tang.intellij.lua.psi.LuaIndexExpr
+import com.tang.intellij.lua.psi.LuaParenExpr
 import com.tang.intellij.lua.psi.LuaVisitor
 import com.tang.intellij.lua.search.SearchContext
+import com.tang.intellij.lua.ty.ITy
 import com.tang.intellij.lua.ty.Ty
 import com.tang.intellij.lua.ty.TyClass
+import com.tang.intellij.lua.ty.TyTuple
+import java.lang.Integer.min
+import kotlin.math.max
 
 class AssignTypeInspection : StrictInspection() {
     override fun buildVisitor(myHolder: ProblemsHolder, isOnTheFly: Boolean, session: LocalInspectionToolSession): PsiElementVisitor =
@@ -35,23 +40,36 @@ class AssignTypeInspection : StrictInspection() {
                     val assignees = o.varExprList.exprList
                     val values = o.valueExprList?.exprList ?: listOf()
                     val searchContext = SearchContext(o.project)
+                    val totalValueTypes = ArrayList<ITy>()
+                    for(value in values) {
+                        val valueType = value.guessType(searchContext)
+                        if (valueType is TyTuple) {
+                            if (value is LuaParenExpr) {
+                                totalValueTypes.add(valueType.list.first())
+                            } else {
+                                totalValueTypes.addAll(valueType.list)
+                            }
+                        } else {
+                            totalValueTypes.add(valueType)
+                        }
+                    }
 
                     // Check right number of fields/assignments
-                    if (assignees.size > values.size) {
-                        for (i in values.size until assignees.size) {
+                    if (assignees.size > totalValueTypes.size) {
+                        for (i in totalValueTypes.size until assignees.size) {
                             myHolder.registerProblem(assignees[i], "Missing value assignment.")
                         }
-                    } else if (assignees.size < values.size) {
-                        for (i in assignees.size until values.size) {
-                            myHolder.registerProblem(values[i], "Nothing to assign to.")
+                    } else if (assignees.size < totalValueTypes.size) {
+                        for (i in assignees.size until totalValueTypes.size) {
+                            myHolder.registerProblem(values[min(i, values.size - 1)], "Nothing to assign to.")
                         }
                     } else {
                         // Try to match types for each assignment
                         for (i in 0 until assignees.size) {
                             val field = assignees[i]
                             val name = field.name ?: ""
-                            val value = values[i]
-                            val valueType = value.guessType(searchContext)
+                            val value = values[min(i, values.size - 1)]
+                            val valueType = totalValueTypes[i]
 
                             // Field access
                             if (field is LuaIndexExpr) {

@@ -17,6 +17,7 @@
 package com.tang.intellij.lua.codeInsight.inspection
 
 import com.intellij.codeInspection.LocalInspectionToolSession
+import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiFile
@@ -103,7 +104,14 @@ class ReturnTypeInspection : StrictInspection() {
                     }
                     return null
                 }
-
+                override fun visitClosureExpr(o: LuaClosureExpr) {
+                    val searchContext = SearchContext(o.project)
+                    val returnType = guessClosureReturnTypes(o, searchContext)
+                    val returnStats = getReturnStats(o.funcBody)
+                    if (returnType !is TyVoid && returnStats.size == 0) {
+                        myHolder.registerProblem(o.funcBody.lastChild, "Too little returns")
+                    }
+                }
                 override fun visitFuncBody(o: LuaFuncBody) {
                     super.visitFuncBody(o)
 

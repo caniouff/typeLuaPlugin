@@ -45,6 +45,7 @@ import com.tang.intellij.lua.stubs.LuaFuncBodyOwnerStub
 import com.tang.intellij.lua.ty.*
 import java.util.*
 import javax.swing.Icon
+import kotlin.collections.ArrayList
 
 fun setName(owner: PsiNameIdentifierOwner, name: String): PsiElement {
     val oldId = owner.nameIdentifier
@@ -639,4 +640,25 @@ fun isDeprecated(member: LuaClassMember): Boolean {
             return comment.isDeprecated
     }
     return false
+}
+
+private fun getReturnsStatsImpl(element: LuaPsiElement, returnStats: ArrayList<PsiElement>) {
+    if (element is LuaReturnStat) {
+        returnStats.add(element)
+    } else if (element !is LuaFuncBody) {
+        for(childEle in element.children) {
+            if (childEle != null && childEle is LuaPsiElement) {
+                getReturnsStatsImpl(childEle, returnStats)
+            }
+        }
+    }
+}
+fun getReturnStats(funcBody: LuaFuncBody): ArrayList<PsiElement> {
+    val returnStats = ArrayList<PsiElement>()
+    for(childEle in funcBody.children) {
+        if (childEle != null && childEle is LuaPsiElement) {
+            getReturnsStatsImpl(childEle, returnStats)
+        }
+    }
+    return returnStats
 }

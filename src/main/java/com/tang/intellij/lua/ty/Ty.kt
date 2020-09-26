@@ -569,6 +569,7 @@ class TyVoid : Ty(TyKind.Void) {
 
 class TyFuncDef : Ty(TyKind.FuncDef) {
     var paramsArgs : ITy? = null
+    var paramsTypeInfo : ArrayList<LuaParamInfo>? = null
     var returnsArgs : ITy? = null
     var varArgs : ITy? = null
     var global : Boolean = false
@@ -585,6 +586,18 @@ class TyFuncDef : Ty(TyKind.FuncDef) {
         } else {
             returnsArgs = getArgsTy(args, context, true)
         }
+    }
+
+    fun setParamsType(params :ITy?) {
+        paramsArgs = params
+    }
+
+    fun setParamsLuaInfo(params: ArrayList<LuaParamInfo>) {
+        paramsTypeInfo = params
+    }
+
+    fun hasParamsInfo(): Boolean {
+        return paramsTypeInfo != null
     }
 
     fun getArgsTy(args: LuaArgs?, context: SearchContext, bRet : Boolean): ITy{
@@ -613,7 +626,10 @@ class TyFuncDef : Ty(TyKind.FuncDef) {
         return UNKNOWN
     }
 
-    fun getParams(functionTy: TyFunction): Array<LuaParamInfo>{
+    fun getParams(functionTy: TyFunction?): Array<LuaParamInfo>{
+        if (functionTy == null) {
+            return paramsTypeInfo?.toTypedArray() ?: emptyArray()
+        }
         val tyTuple = paramsArgs
         if (tyTuple is TyTuple) {
             var idx = 0

@@ -28,6 +28,7 @@ import com.tang.intellij.lua.psi.*
 import com.tang.intellij.lua.psi.impl.LuaNameExprMixin
 import com.tang.intellij.lua.search.SearchContext
 import com.tang.intellij.lua.stubs.index.LuaClassMemberIndex
+import org.luaj.vm2.Lua
 
 fun inferExpr(expr: LuaExpr?, context: SearchContext): ITy {
     return when (expr) {
@@ -221,6 +222,32 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
                 return def
             }
         }
+    }else if(expr is LuaNameExpr && expr.name == Constants.WORD_FUNC_DECLARE) {
+        val argsExpr = luaCallExpr.args
+
+        val def = TyFuncDef()
+        val argInfoList = ArrayList<LuaParamInfo>()
+        if (argsExpr is LuaListArgs) {
+            val argTypeList = ArrayList<ITy>()
+            argsExpr.exprList.forEach {
+                if (it is LuaIndexExpr) {
+                    val parantIndexExpr = it.prefixExpr
+                    val param = LuaParamInfo()
+                    param.ty = parantIndexExpr.guessType(context)
+                    param.name = it.name ?: ""
+                    param.isSelf = false
+                    argInfoList.add(param)
+
+                    argTypeList.add(param.ty)
+                }
+            }
+            def.setParamsType(TyTuple(argTypeList))
+        } else {
+            def.setParamsType(Ty.VOID)
+        }
+        def.setParamsLuaInfo(argInfoList)
+        return def
+
     } else if (expr is LuaNameExpr && expr.name == Constants.WORD_MAP) {
         val argsExpr = luaCallExpr.args
 
@@ -283,9 +310,12 @@ private fun LuaCallExpr.infer(context: SearchContext): ITy {
             }
             is TyFuncDef -> {
                 it.setParamsOrReturns(luaCallExpr.args, context)
-                val funDef = it.union(it.toFuncDefReceiver())
-
-                ret = ret.union(funDef)
+                ret = if (it.hasParamsInfo()) {
+                    TyFuncDeclarePsiFunction(it)
+                } else {
+                    val funDef = it.union(it.toFuncDefReceiver())
+                    ret.union(funDef)
+                }
             }
             //constructor : Class table __call
             is ITyClass -> ret = ret.union(it)

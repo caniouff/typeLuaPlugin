@@ -169,8 +169,13 @@ class FunSignature(colonCall: Boolean,
             return FunSignature(colonCall, functionTy.returnType, functionTy.varargParam?.type, initParams(functionTy))
         }
 
+
+
         fun create(colonCall: Boolean, funcDef: TyFuncDef, functionTy: TyFunction) : IFunSignature {
             return FunSignature(colonCall, funcDef.returnsArgs ?: Ty.VOID, funcDef.varArgs, funcDef.getParams(functionTy))
+        }
+        fun create(colonCall: Boolean, funcDef: TyFuncDef) : IFunSignature {
+            return FunSignature(colonCall, funcDef.returnsArgs ?: Ty.VOID, funcDef.varArgs, funcDef.getParams(null))
         }
 
         fun serialize(sig: IFunSignature, stream: StubOutputStream) {
@@ -321,6 +326,12 @@ class TyDocPsiFunction(func: LuaDocFunctionTy) : TyFunction() {
 
 class TyFuncDefPsiFunction(funcDef: TyFuncDef, functionTy: TyFunction) : TyFunction() {
     private val main = FunSignature.create(false, funcDef, functionTy)
+    override val mainSignature: IFunSignature = main
+    override val signatures: Array<IFunSignature> = emptyArray()
+    val structFunc = funcDef.receiver != null
+}
+class TyFuncDeclarePsiFunction(funcDef: TyFuncDef) : TyFunction() {
+    private val main = FunSignature.create(false, funcDef)
     override val mainSignature: IFunSignature = main
     override val signatures: Array<IFunSignature> = emptyArray()
     val structFunc = funcDef.receiver != null

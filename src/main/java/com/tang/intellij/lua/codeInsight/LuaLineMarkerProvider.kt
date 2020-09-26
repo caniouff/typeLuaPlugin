@@ -256,11 +256,21 @@ class LuaLineMarkerProvider(private val daemonSettings: DaemonCodeAnalyzerSettin
                     }
                 }
             }
-        } else if (element is LuaNameExpr) {
-            if (element.name == Constants.WORD_STRUCT || element.name == Constants.WORD_INTERFACE) {
-                val callExpr = PsiTreeUtil.getParentOfType(element, LuaCallExpr::class.java)
-                if (callExpr != null) {
-                    //collectNavigationMarkers(callExpr, result)
+        }  else if (element is LuaTableField) {
+            val callExpr = LuaPsiTreeUtil.resolveParentOfType(element, LuaCallExpr::class.java)
+            if (callExpr?.expr?.text == Constants.WORD_INTERFACE) {
+                val project = element.getProject()
+                val context = SearchContext(project)
+                val tyInterface = TyUnion.find(callExpr.guessType(context), TyStruct::class.java)
+                if (tyInterface is TyStruct) {
+                    val structTargets = collectImplementInterfaceStructs(tyInterface, project, context)
+                    val funcTargets = collectFunInStructs(structTargets, element.fieldName?: "", context)
+                    if (funcTargets.size > 0) {
+                        val builder = NavigationGutterIconBuilder.create(AllIcons.Gutter.ImplementedMethod)
+                                .setTargets(funcTargets)
+                                .setTooltipText("Implement method")
+                        result.add(builder.createLineMarkerInfo(element))
+                    }
                 }
             }
         }

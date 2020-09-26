@@ -93,8 +93,25 @@ public class LuaPsiTreeUtil {
         }
         return null;
     }
+    public static <T extends PsiElement> T resolveParentOfType(@Nullable PsiElement element, @NotNull Class<T> aClass) {
+        if (element == null) {
+            return null;
+        } else {
+            element = element.getParent();
 
+            while(element != null && !aClass.isInstance(element)) {
+                if (element instanceof PsiFile) {
+                    return null;
+                }
 
+                element = element.getParent();
+            }
+            if (aClass.isInstance(element)) {
+                return aClass.cast(element);
+            }
+        }
+        return null;
+    }
     private static final Class[] WS = {PsiWhiteSpace.class};
     private static final Class[] WS_COMMENTS = {PsiWhiteSpace.class, PsiComment.class};
 
